@@ -159,11 +159,6 @@ const InvoiceManager: React.FC<InvoiceManagerProps> = ({ statusFilter, setStatus
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Invoices
-            {companyInfo && (
-              <span className="text-xl font-normal text-gray-600 ml-2">
-                - {companyInfo.name}
-              </span>
-            )}
           </h1>
           <p className="text-gray-600 mt-1">Manage and validate invoices against QuickBooks data</p>
         </div>

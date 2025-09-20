@@ -1,12 +1,12 @@
-'use client';
+"use client";
 // src/components/layout/Header.tsx
-import React, { useState } from 'react';
-import { Bell, LogOut, User, ChevronDown } from 'lucide-react';
-import { toast } from '../../lib/toast';
-import SearchInput from '../ui/SearchInput';
-import CompanySwitcher from '../companies/CompanySwitcher';
-import { useAuth } from '../../contexts/AuthContext';
-import { useCompany } from '../../contexts/CompanyContext';
+import React, { useState } from "react";
+import { Bell, LogOut, User, ChevronDown } from "lucide-react";
+import { toast } from "../../lib/toast";
+import SearchInput from "../ui/SearchInput";
+import CompanySwitcher from "../companies/CompanySwitcher";
+import { useAuth } from "../../contexts/AuthContext";
+import { useCompany } from "../../contexts/CompanyContext";
 
 const Header: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -14,39 +14,41 @@ const Header: React.FC = () => {
   const { activeCompany } = useCompany();
 
   const handleLogout = async () => {
-    toast.confirm(
-      'Are you sure you want to sign out?',
-      async () => {
-        toast.loading('Signing out...');
-        await logout();
-      }
-    );
+    toast.confirm("Are you sure you want to sign out?", async () => {
+      toast.loading("Signing out...");
+      await logout();
+    });
     setShowUserMenu(false);
   };
 
   const getDisplayName = () => {
     if (user?.first_name || user?.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      return `${user.first_name || ""} ${user.last_name || ""}`.trim();
     }
-    return user?.email?.split('@')[0] || 'User';
+    return user?.email?.split("@")[0] || "User";
   };
 
   const getInitials = () => {
     if (user?.first_name || user?.last_name) {
-      return `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
+      return `${user.first_name?.[0] || ""}${
+        user.last_name?.[0] || ""
+      }`.toUpperCase();
     }
-    return user?.email?.[0]?.toUpperCase() || 'U';
+    return user?.email?.[0]?.toUpperCase() || "U";
   };
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div/>
+        <div className="flex items-center space-x-4 hidden">
           <SearchInput placeholder="Search" />
           {activeCompany && (
             <div className="hidden md:flex items-center text-sm text-gray-600">
               <span className="mr-2">Company:</span>
-              <span className="font-medium text-gray-900">{activeCompany.name}</span>
+              <span className="font-medium text-gray-900">
+                {activeCompany.name}
+              </span>
             </div>
           )}
         </div>
@@ -68,7 +70,9 @@ const Header: React.FC = () => {
                 {getInitials()}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900">{getDisplayName()}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {getDisplayName()}
+                </p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -78,7 +82,9 @@ const Header: React.FC = () => {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                 <div className="py-2">
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{getDisplayName()}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {getDisplayName()}
+                    </p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
                     {activeCompany && (
                       <p className="text-xs text-gray-500 mt-1">
