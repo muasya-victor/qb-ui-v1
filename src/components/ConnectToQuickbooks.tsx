@@ -1,24 +1,24 @@
-"use client"
-import { useState } from 'react';
-import { toast } from '../lib/toast';
-import { useAuth } from '../contexts/AuthContext';
-import RegistrationForm from './auth/RegistrationForm';
+"use client";
+import { useState } from "react";
+import { toast } from "../lib/toast";
+import { useAuth } from "../contexts/AuthContext";
+import RegistrationForm from "./auth/RegistrationForm";
 
 export default function ConnectToQuickbooks() {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const { login } = useAuth();
 
   const handleConnect = async () => {
-    if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address.');
+    if (!email || !email.includes("@")) {
+      toast.error("Please enter a valid email address.");
       return;
     }
     if (!password) {
-      toast.error('Please enter your password.');
+      toast.error("Please enter your password.");
       return;
     }
 
@@ -28,12 +28,17 @@ export default function ConnectToQuickbooks() {
     const loadingPromise = login(email.trim(), password.trim());
 
     toast.promise(loadingPromise, {
-      loading: 'Authenticating...',
+      loading: "Authenticating...",
       success: (result) => {
         if (result.success) {
           if (result.needsConnection) {
-            setMessage(result.message || 'Please connect your QuickBooks company to continue.');
-            if (result.authUrl) {
+            setMessage(
+              result.message ||
+                "Please connect your QuickBooks company to continue."
+            );
+            
+
+            if (result.authUrl && localStorage.getItem("auth_tokens")) {
               setTimeout(() => {
                 window.location.href = result.authUrl!;
               }, 1500);
@@ -41,15 +46,18 @@ export default function ConnectToQuickbooks() {
             return 'Login successful! Redirecting to QuickBooks...';
           } else {
             setTimeout(() => {
-              window.location.href = '/dashboard';
+              window.location.href = "/dashboard";
             }, 1000);
-            return 'Login successful! Redirecting to dashboard...';
+            return "Login successful! Redirecting to dashboard...";
           }
         }
-        return 'Login successful!';
+        return "Login successful!";
       },
       error: (error) => {
-        const errorMessage = error instanceof Error ? error.message : 'Could not connect. Please try again.';
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Could not connect. Please try again.";
         setMessage(errorMessage);
         return errorMessage;
       },
@@ -65,9 +73,11 @@ export default function ConnectToQuickbooks() {
   };
 
   const handleRegistrationSuccess = () => {
-    setMessage('Registration successful! Please connect your QuickBooks company to continue.');
+    setMessage(
+      "Registration successful! Please connect your QuickBooks company to continue."
+    );
     setTimeout(() => {
-      setMode('login');
+      setMode("login");
     }, 2000);
   };
 
@@ -75,10 +85,10 @@ export default function ConnectToQuickbooks() {
     <div className="min-h-screen flex">
       {/* Left Side - Form */}
       <div className="w-1/2 bg-gray-50 flex items-center justify-center px-16 py-8">
-        {mode === 'register' ? (
+        {mode === "register" ? (
           <RegistrationForm
             onSuccess={handleRegistrationSuccess}
-            onSwitchToLogin={() => setMode('login')}
+            onSwitchToLogin={() => setMode("login")}
           />
         ) : (
           <div className="w-full max-w-md">
@@ -86,7 +96,8 @@ export default function ConnectToQuickbooks() {
             <div className="mb-10">
               <h1 className="text-2xl font-normal text-gray-800">Sign In</h1>
               <p className="text-sm text-gray-600 mt-2">
-                Enter your email and password to connect your QuickBooks account and receive updates.
+                Enter your email and password to connect your QuickBooks account
+                and receive updates.
               </p>
             </div>
 
@@ -126,11 +137,15 @@ export default function ConnectToQuickbooks() {
 
               {/* Success/Error Message */}
               {message && (
-                <div className={`border rounded-md px-4 py-3 ${
-                  message.includes('valid') || message.includes('error') || message.includes('Could not')
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : 'bg-green-50 border-green-200 text-green-700'
-                }`}>
+                <div
+                  className={`border rounded-md px-4 py-3 ${
+                    message.includes("valid") ||
+                    message.includes("error") ||
+                    message.includes("Could not")
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-green-50 border-green-200 text-green-700"
+                  }`}
+                >
                   <p className="text-sm">{message}</p>
                 </div>
               )}
@@ -143,9 +158,25 @@ export default function ConnectToQuickbooks() {
               >
                 {isConnecting ? (
                   <div className="flex items-center justify-center space-x-2">
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     <span>Signing In...</span>
                   </div>
@@ -158,7 +189,7 @@ export default function ConnectToQuickbooks() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setMode('register')}
+                  onClick={() => setMode("register")}
                   className="text-sm text-teal-600 hover:text-teal-700 font-medium"
                   disabled={isConnecting}
                 >
@@ -168,8 +199,9 @@ export default function ConnectToQuickbooks() {
 
               {/* Privacy Notice */}
               <div className="text-xs text-gray-500 text-center">
-                By connecting, you agree to our Terms of Service and Privacy Policy.
-                You&apos;ll receive a welcome email upon successful connection.
+                By connecting, you agree to our Terms of Service and Privacy
+                Policy. You&apos;ll receive a welcome email upon successful
+                connection.
               </div>
             </div>
           </div>
@@ -195,12 +227,14 @@ export default function ConnectToQuickbooks() {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-medium text-gray-900">Analytics</h3>
             <div className="flex space-x-6 text-sm">
-              <span className="text-gray-900 border-b-2 border-gray-900 pb-1 font-medium">Weekly</span>
+              <span className="text-gray-900 border-b-2 border-gray-900 pb-1 font-medium">
+                Weekly
+              </span>
               <span className="text-gray-500">Monthly</span>
               <span className="text-gray-500">Yearly</span>
             </div>
           </div>
-          
+
           {/* Line Chart */}
           <div className="h-20 mb-6 relative">
             <svg className="w-full h-full" viewBox="0 0 320 80">
@@ -218,14 +252,14 @@ export default function ConnectToQuickbooks() {
               />
             </svg>
           </div>
-          
+
           <div className="flex justify-between text-xs text-gray-500 mb-6">
             <span>MON</span>
             <span>TUE</span>
             <span>WED</span>
             <span>THU</span>
           </div>
-          
+
           {/* Progress Section */}
           <div className="flex items-center justify-between">
             <div>
@@ -234,7 +268,10 @@ export default function ConnectToQuickbooks() {
             <div className="flex items-center space-x-4">
               {/* Circular Progress */}
               <div className="relative w-12 h-12">
-                <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+                <svg
+                  className="w-12 h-12 transform -rotate-90"
+                  viewBox="0 0 48 48"
+                >
                   <circle
                     cx="24"
                     cy="24"
@@ -263,10 +300,13 @@ export default function ConnectToQuickbooks() {
 
         {/* Content */}
         <div className="text-center text-white max-w-md relative z-10">
-          <h2 className="text-2xl font-medium mb-4 leading-tight">Very simple way you can engage</h2>
+          <h2 className="text-2xl font-medium mb-4 leading-tight">
+            Very simple way you can engage
+          </h2>
           <p className="text-teal-100 leading-relaxed text-sm">
-            Welcome to Smart Invoice Management System! Efficiently track and manage your invoices with ease.
-            Connect your QuickBooks and receive instant notifications.
+            Welcome to Smart Invoice Management System! Efficiently track and
+            manage your invoices with ease. Connect your QuickBooks and receive
+            instant notifications.
           </p>
         </div>
       </div>

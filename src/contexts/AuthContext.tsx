@@ -1,15 +1,34 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from '../lib/toast';
-import apiService, { User, TokenData } from '../services/apiService';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { toast } from "../lib/toast";
+import apiService, { User, TokenData } from "../services/apiService";
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; needsConnection?: boolean; authUrl?: string; message?: string }>;
-  register: (data: { email: string; password: string; first_name?: string; last_name?: string }) => Promise<{ success: boolean; message: string }>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{
+    success: boolean;
+    needsConnection?: boolean;
+    authUrl?: string;
+    message?: string;
+  }>;
+  register: (data: {
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+  }) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   setTokens: (tokens: TokenData) => void;
@@ -20,7 +39,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -35,16 +54,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initAuth = () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === "undefined") return;
 
       const isAuthenticated = apiService.isAuthenticated();
       if (isAuthenticated) {
-        const userData = localStorage.getItem('user_data');
+        const userData = localStorage.getItem("user_data");
         if (userData) {
           try {
             setUser(JSON.parse(userData));
           } catch (error) {
-            console.error('Failed to parse user data:', error);
+            console.error("Failed to parse user data:", error);
           }
         }
       }
@@ -59,6 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiService.getAuthUrl({ email, password });
 
       if (response.success) {
+
         apiService.setTokens(response.tokens);
 
         if (response.is_connected && response.company) {
@@ -68,32 +88,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             success: true,
             needsConnection: true,
             authUrl: response.authUrl || undefined,
-            message: response.message
+            message: response.message,
           };
         }
       }
       return { success: false };
     } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
+      throw new Error(error.message || "Login failed");
     }
   };
 
-  const register = async (data: { email: string; password: string; first_name?: string; last_name?: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+  }) => {
     try {
       const response = await apiService.register(data);
 
       if (response.success) {
         apiService.setTokens(response.tokens);
         setUser(response.user);
-        localStorage.setItem('user_data', JSON.stringify(response.user));
-        toast.success('Account created successfully!');
+        localStorage.setItem("user_data", JSON.stringify(response.user));
+        toast.success("Account created successfully!");
         return { success: true, message: response.message };
       }
-      const errorMsg = 'Registration failed';
+      const errorMsg = "Registration failed";
       toast.error(errorMsg);
       return { success: false, message: errorMsg };
     } catch (error: any) {
-      const errorMsg = error.message || 'Registration failed';
+      const errorMsg = error.message || "Registration failed";
       toast.error(errorMsg);
       throw new Error(errorMsg);
     }
@@ -103,15 +128,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await apiService.logout();
       setUser(null);
-      localStorage.removeItem('user_data');
-      toast.success('Logged out successfully');
+      localStorage.removeItem("user_data");
+      toast.success("Logged out successfully");
 
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed');
+      console.error("Logout error:", error);
+      toast.error("Logout failed");
     }
   };
 
@@ -122,9 +147,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setUserData = (userData: User | null) => {
     setUser(userData);
     if (userData) {
-      localStorage.setItem('user_data', JSON.stringify(userData));
+      localStorage.setItem("user_data", JSON.stringify(userData));
     } else {
-      localStorage.removeItem('user_data');
+      localStorage.removeItem("user_data");
     }
   };
 
@@ -136,12 +161,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     setUser: setUserData,
-    setTokens
+    setTokens,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

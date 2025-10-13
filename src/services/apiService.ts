@@ -92,27 +92,28 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+    this.baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
   }
 
   private getAuthHeaders(): Record<string, string> {
     const token = this.getAccessToken();
     return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
   private getAccessToken(): string | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
 
-    const authData = localStorage.getItem('auth_tokens');
+    const authData = localStorage.getItem("auth_tokens");
     if (authData) {
       try {
         const parsed: TokenData = JSON.parse(authData);
         return parsed.access;
       } catch (error) {
-        console.error('Failed to parse auth tokens:', error);
+        console.error("Failed to parse auth tokens:", error);
         return null;
       }
     }
@@ -120,27 +121,33 @@ class ApiService {
   }
 
   setTokens(tokens: TokenData): void {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('auth_tokens', JSON.stringify(tokens));
+    if (typeof window === "undefined") return;
+    console.log(">>> setTokens called in browser:", tokens);
+    localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+    console.log(">>> localStorage now:", localStorage.getItem("auth_tokens"));
   }
 
   clearTokens(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('auth_tokens');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('active_company');
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("auth_tokens");
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("active_company");
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
     const responseData = await response.json().catch(() => null);
 
     if (!response.ok) {
-      const errorMessage = responseData?.error || responseData?.detail || responseData?.message || `HTTP error! status: ${response.status}`;
-      console.error('API Error:', {
+      const errorMessage =
+        responseData?.error ||
+        responseData?.detail ||
+        responseData?.message ||
+        `HTTP error! status: ${response.status}`;
+      console.error("API Error:", {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
-        data: responseData
+        data: responseData,
       });
       throw new Error(errorMessage);
     }
@@ -150,19 +157,19 @@ class ApiService {
 
   async register(data: RegisterRequest): Promise<RegisterResponse> {
     const response = await fetch(`${this.baseUrl}/register/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
     return this.handleResponse<RegisterResponse>(response);
   }
 
   async getAuthUrl(data: AuthUrlRequest): Promise<AuthUrlResponse> {
     const response = await fetch(`${this.baseUrl}/auth-url/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Include cookies for session management
-      body: JSON.stringify(data)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // Include cookies for session management
+      body: JSON.stringify(data),
     });
     return this.handleResponse<AuthUrlResponse>(response);
   }
@@ -170,17 +177,19 @@ class ApiService {
   async getCompanies(): Promise<CompaniesResponse> {
     const response = await fetch(`${this.baseUrl}/companies/`, {
       headers: this.getAuthHeaders(),
-      credentials: 'include'
+      credentials: "include",
     });
     return this.handleResponse<CompaniesResponse>(response);
   }
 
-  async setActiveCompany(data: SetActiveCompanyRequest): Promise<SetActiveCompanyResponse> {
+  async setActiveCompany(
+    data: SetActiveCompanyRequest
+  ): Promise<SetActiveCompanyResponse> {
     const response = await fetch(`${this.baseUrl}/companies/set-active/`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getAuthHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(data)
+      credentials: "include",
+      body: JSON.stringify(data),
     });
     return this.handleResponse<SetActiveCompanyResponse>(response);
   }
@@ -188,19 +197,19 @@ class ApiService {
   async handleCallback(data: CallbackRequest): Promise<CallbackResponse> {
     // Try with auth headers first
     let response = await fetch(`${this.baseUrl}/callback/`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getAuthHeaders(),
-      credentials: 'include', // Include cookies for session management
-      body: JSON.stringify(data)
+      credentials: "include", // Include cookies for session management
+      body: JSON.stringify(data),
     });
 
     // If unauthorized, try without auth headers (for cases where token might be expired)
     if (response.status === 401) {
       response = await fetch(`${this.baseUrl}/callback/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies for session management
-        body: JSON.stringify(data)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Include cookies for session management
+        body: JSON.stringify(data),
       });
     }
 
@@ -210,27 +219,35 @@ class ApiService {
   async logout(): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/logout/`, {
-        method: 'POST',
+        method: "POST",
         headers: this.getAuthHeaders(),
-        credentials: 'include' // Include cookies for session management
+        credentials: "include", // Include cookies for session management
       });
 
       if (!response.ok) {
-        console.warn('Logout request failed, but clearing local data anyway');
+        console.warn("Logout request failed, but clearing local data anyway");
       }
     } catch (error) {
-      console.warn('Logout request failed, but clearing local data anyway:', error);
+      console.warn(
+        "Logout request failed, but clearing local data anyway:",
+        error
+      );
     } finally {
       this.clearTokens();
     }
   }
 
-  async disconnectCompany(companyId: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${this.baseUrl}/companies/${companyId}/disconnect/`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      credentials: 'include'
-    });
+  async disconnectCompany(
+    companyId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(
+      `${this.baseUrl}/companies/${companyId}/disconnect/`,
+      {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      }
+    );
     return this.handleResponse<{ success: boolean; message: string }>(response);
   }
 
