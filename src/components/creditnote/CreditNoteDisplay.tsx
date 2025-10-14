@@ -12,7 +12,7 @@ import {
   Share,
 } from "lucide-react";
 
-export interface InvoiceLineItem {
+export interface CreditNoteLineItem {
   id: string;
   line_num: number;
   item_name: string;
@@ -31,9 +31,9 @@ export interface CompanyInfo {
   qb_legal_name: string;
   currency_code: string;
   logo_url?: string;
-  invoice_logo_enabled: boolean;
+  credit_note_logo_enabled: boolean;
   brand_color: string;
-  invoice_footer_text?: string;
+  credit_note_footer_text?: string;
   formatted_address?: string;
   contact_info?: {
     email?: string;
@@ -42,12 +42,11 @@ export interface CompanyInfo {
   };
 }
 
-export interface Invoice {
+export interface CreditNote {
   id: string;
-  qb_invoice_id: string;
+  qb_credit_note_id: string;
   doc_number: string;
   txn_date: string;
-  due_date: string;
   customer_name: string;
   total_amt: number;
   balance: number;
@@ -56,25 +55,26 @@ export interface Invoice {
   private_note?: string;
   customer_memo?: string;
   currency_code: string;
-  status: "paid" | "unpaid" | "partial";
-  line_items: InvoiceLineItem[];
+  status: "applied" | "pending" | "void";
+  line_items: CreditNoteLineItem[];
+  original_invoice_ref?: string;
 }
 
-interface InvoiceDisplayProps {
-  invoice: Invoice;
+interface CreditNoteDisplayProps {
+  creditNote: CreditNote;
   companyInfo: CompanyInfo;
   onDownload?: () => void;
   onShare?: () => void;
   className?: string;
 }
 
-export default function InvoiceDisplay({
-  invoice,
+export default function CreditNoteDisplay({
+  creditNote,
   companyInfo,
   onDownload,
   onShare,
   className = "",
-}: InvoiceDisplayProps) {
+}: CreditNoteDisplayProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -102,14 +102,27 @@ export default function InvoiceDisplay({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "paid":
+      case "applied":
         return "bg-green-100 text-green-800 border-green-200";
-      case "unpaid":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "partial":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "pending":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "void":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "applied":
+        return "Applied";
+      case "pending":
+        return "Pending";
+      case "void":
+        return "Void";
+      default:
+        return status;
     }
   };
 
@@ -125,7 +138,7 @@ export default function InvoiceDisplay({
           {/* Company Info */}
           <div className="flex-1">
             <div className="flex items-start space-x-4">
-              {companyInfo.logo_url && companyInfo.invoice_logo_enabled && (
+              {companyInfo.logo_url && companyInfo.credit_note_logo_enabled && (
                 <div className="flex-shrink-0">
                   <img
                     src={companyInfo.logo_url}
@@ -177,36 +190,38 @@ export default function InvoiceDisplay({
             </div>
           </div>
 
-          {/* Invoice Header */}
+          {/* Credit Note Header */}
           <div className="text-right">
             <div className="flex items-center justify-end space-x-3 mb-3">
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
-                  invoice.status
+                  creditNote.status
                 )}`}
               >
-                {invoice.status.charAt(0).toUpperCase() +
-                  invoice.status.slice(1)}
+                {getStatusText(creditNote.status)}
               </span>
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                Invoice #{invoice.doc_number || invoice.qb_invoice_id}
+                Credit Note #
+                {creditNote.doc_number || creditNote.qb_credit_note_id}
               </span>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">INVOICE</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              CREDIT NOTE
+            </h2>
             <div className="space-y-1 text-sm">
               <div className="flex items-center justify-end space-x-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-600">Invoice Date:</span>
+                <span className="text-gray-600">Credit Date:</span>
                 <span className="font-medium text-gray-900 w-24 text-left">
-                  {formatDate(invoice.txn_date)}
+                  {formatDate(creditNote.txn_date)}
                 </span>
               </div>
-              {invoice.due_date && (
+              {creditNote.original_invoice_ref && (
                 <div className="flex items-center justify-end space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-600">Due Date:</span>
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-600">Original Invoice:</span>
                   <span className="font-medium text-gray-900 w-24 text-left">
-                    {formatDate(invoice.due_date)}
+                    {creditNote.original_invoice_ref}
                   </span>
                 </div>
               )}
@@ -224,7 +239,7 @@ export default function InvoiceDisplay({
             </h3>
             <div className="bg-gray-50 p-4 rounded border border-gray-200">
               <p className="font-semibold text-gray-900 text-lg">
-                {invoice.customer_name}
+                {creditNote.customer_name}
               </p>
             </div>
           </div>
@@ -276,7 +291,7 @@ export default function InvoiceDisplay({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {invoice.line_items.map((item, index) => (
+              {creditNote.line_items.map((item, index) => (
                 <tr
                   key={item.id}
                   className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -320,38 +335,38 @@ export default function InvoiceDisplay({
               <div className="flex justify-between items-center py-2 border-b border-gray-200">
                 <span className="text-gray-700 text-sm">Subtotal</span>
                 <span className="font-medium text-gray-900 text-sm">
-                  {formatCurrency(invoice.subtotal || invoice.total_amt)}
+                  {formatCurrency(creditNote.subtotal || creditNote.total_amt)}
                 </span>
               </div>
 
-              {invoice.tax_total && invoice.tax_total > 0 && (
+              {creditNote.tax_total && creditNote.tax_total > 0 && (
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="text-gray-700 text-sm">Tax</span>
                   <span className="font-medium text-gray-900 text-sm">
-                    {formatCurrency(invoice.tax_total)}
+                    {formatCurrency(creditNote.tax_total)}
                   </span>
                 </div>
               )}
 
               <div className="flex justify-between items-center py-3 border-t-2 border-gray-300">
                 <span className="text-lg font-semibold text-gray-900">
-                  Total
+                  Credit Amount
                 </span>
                 <span
                   className="text-lg font-bold"
                   style={{ color: brandColor }}
                 >
-                  {formatCurrency(invoice.total_amt)}
+                  {formatCurrency(creditNote.total_amt)}
                 </span>
               </div>
 
-              {invoice.balance > 0 && (
-                <div className="flex justify-between items-center py-2 bg-red-50 px-3 rounded border border-red-200">
-                  <span className="text-red-800 font-medium text-sm">
-                    Balance Due
+              {creditNote.balance > 0 && (
+                <div className="flex justify-between items-center py-2 bg-blue-50 px-3 rounded border border-blue-200">
+                  <span className="text-blue-800 font-medium text-sm">
+                    Available Credit
                   </span>
-                  <span className="text-red-800 font-bold text-sm">
-                    {formatCurrency(invoice.balance)}
+                  <span className="text-blue-800 font-bold text-sm">
+                    {formatCurrency(creditNote.balance)}
                   </span>
                 </div>
               )}
@@ -360,30 +375,30 @@ export default function InvoiceDisplay({
         </div>
 
         {/* Notes Section */}
-        {(invoice.customer_memo || invoice.private_note) && (
+        {(creditNote.customer_memo || creditNote.private_note) && (
           <div className="mt-8 pt-6 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
               <FileText className="w-5 h-5 mr-2 text-gray-600" />
               Notes
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
-              {invoice.customer_memo && (
+              {creditNote.customer_memo && (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Message
                   </p>
                   <p className="text-gray-800 text-sm leading-relaxed">
-                    {invoice.customer_memo}
+                    {creditNote.customer_memo}
                   </p>
                 </div>
               )}
-              {invoice.private_note && (
+              {creditNote.private_note && (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Internal Notes
                   </p>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    {invoice.private_note}
+                    {creditNote.private_note}
                   </p>
                 </div>
               )}
@@ -392,10 +407,10 @@ export default function InvoiceDisplay({
         )}
 
         {/* Footer */}
-        {companyInfo.invoice_footer_text && (
+        {companyInfo.credit_note_footer_text && (
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">
             <p className="text-sm text-gray-600 leading-relaxed">
-              {companyInfo.invoice_footer_text}
+              {companyInfo.credit_note_footer_text}
             </p>
           </div>
         )}

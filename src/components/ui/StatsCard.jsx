@@ -5,29 +5,35 @@ import React from 'react';
 const StatsCard = ({ title, value, color = 'gray', icon, trend }) => {
   const colorClasses = {
     gray: {
-      text: 'text-gray-900',
-      bg: 'bg-gray-50',
-      border: 'border-gray-200',
-      icon: 'text-gray-600'
+      text: "text-gray-900",
+      bg: "bg-gray-50",
+      border: "border-gray-200",
+      icon: "text-gray-600",
     },
     green: {
-      text: 'text-green-600',
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      icon: 'text-green-500'
+      text: "text-green-600",
+      bg: "bg-green-50",
+      border: "border-green-200",
+      icon: "text-green-500",
     },
     red: {
-      text: 'text-red-500',
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      icon: 'text-red-500'
+      text: "text-red-500",
+      bg: "bg-red-50",
+      border: "border-red-200",
+      icon: "text-red-500",
     },
     blue: {
-      text: 'text-blue-600',
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: 'text-blue-500'
-    }
+      text: "text-blue-600",
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      icon: "text-blue-500",
+    },
+    purple: {
+      text: "text-purple-600",
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+      icon: "text-purple-500",
+    },
   };
 
   const styles = colorClasses[color];
