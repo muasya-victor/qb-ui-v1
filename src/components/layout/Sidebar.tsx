@@ -1,18 +1,39 @@
 // src/components/layout/Sidebar.tsx
-'use client';
+"use client";
 
-import React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, BarChart3 } from 'lucide-react';
+import React from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { LayoutDashboard, Users, FileText, BarChart3, Wallet } from "lucide-react";
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { id: 'customers', icon: Users, label: 'Customers', path: '/dashboard/customers' },
-    { id: 'invoices', icon: FileText, label: 'Invoices', path: '/dashboard/invoices' },
+    // {
+    //   id: "dashboard",
+    //   icon: LayoutDashboard,
+    //   label: "Dashboard",
+    //   path: "/dashboard",
+    // },
+    {
+      id: "invoices",
+      icon: FileText,
+      label: "Invoices",
+      path: "/dashboard/invoices",
+    },
+    {
+      id: "creditnote",
+      icon: Wallet,
+      label: "Credit Notes",
+      path: "/dashboard/creditnote",
+    },
+    {
+      id: "customers",
+      icon: Users,
+      label: "Customers",
+      path: "/dashboard/customers",
+    },
   ];
 
   const handleNavigation = (path: string) => {
@@ -26,10 +47,12 @@ const Sidebar: React.FC = () => {
           <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-semibold text-gray-900">Invoice Manager</span>
+          <span className="text-xl font-semibold text-gray-900">
+            Invoice Manager
+          </span>
         </div>
       </div>
-      
+
       <nav className="mt-6">
         <div className="px-6 space-y-2">
           {menuItems.map((item) => {
@@ -40,9 +63,9 @@ const Sidebar: React.FC = () => {
                 key={item.id}
                 onClick={() => handleNavigation(item.path)}
                 className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors ${
-                  isActive 
-                    ? 'bg-green-50 text-green-700 border border-green-200' 
-                    : 'text-gray-600 hover:bg-gray-50'
+                  isActive
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <IconComponent className="w-5 h-5" />
@@ -52,7 +75,6 @@ const Sidebar: React.FC = () => {
           })}
         </div>
       </nav>
-      
     </div>
   );
 };

@@ -54,7 +54,7 @@ function CallbackContent() {
           await refreshCompanies();
 
           setTimeout(() => {
-            router.push("/dashboard");
+            router.push("/dashboard/invoices");
           }, 2000);
         } else {
           setMessage("Failed to connect QuickBooks.");

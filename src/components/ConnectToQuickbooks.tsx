@@ -46,7 +46,7 @@ export default function ConnectToQuickbooks() {
             return 'Login successful! Redirecting to QuickBooks...';
           } else {
             setTimeout(() => {
-              window.location.href = "/dashboard";
+              window.location.href = "/dashboard/invoices";
             }, 1000);
             return "Login successful! Redirecting to dashboard...";
           }

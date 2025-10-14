@@ -50,7 +50,7 @@ export default function QuickBooksCallback() {
 
         // Redirect to dashboard after a short delay
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/dashboard/invoices");
         }, 2000);
 
       } catch (error: any) {
