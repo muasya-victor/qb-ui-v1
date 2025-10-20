@@ -38,12 +38,14 @@ export default function ConnectToQuickbooks() {
             );
 
             // alert(result.authUrl);
+            console.log(result);
+            
 
-            if (result.authUrl && localStorage.getItem("auth_tokens")) {
-              setTimeout(() => {
-                window.location.href = result.authUrl!;
-              }, 1500);
-            }
+            // if (result.authUrl && localStorage.getItem("auth_tokens")) {
+            //   setTimeout(() => {
+            //     window.location.href = result.authUrl!;
+            //   }, 1500);
+            // }
             return "Login successful! Redirecting to QuickBooks...";
           } else {
             setTimeout(() => {

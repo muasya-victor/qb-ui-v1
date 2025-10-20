@@ -67,6 +67,16 @@ const InvoiceTable = ({
     }
   };
 
+  const handleValidationSuccess = () => {
+    // Close the modal
+    setValidationModalOpen(false);
+
+    // Reload the page after a short delay to show success message
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+  };
+
   const getKRAStatus = (invoice) => {
     // Use the actual kra_submission object instead of is_kra_validated
     return invoice.kra_submission?.status || "pending";
@@ -352,6 +362,29 @@ const InvoiceTable = ({
                           {getValidationButtonText(invoice)}
                         </button>
 
+                        {/* View Details Button - Show only if there's a submission */}
+                        {hasKRASubmission(invoice) && (
+                          <button
+                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                            onClick={() => handleViewSubmissionDetails(invoice)}
+                          >
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                            Details
+                          </button>
+                        )}
+
                         {/* View Invoice Button */}
                         <button
                           className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -425,6 +458,7 @@ const InvoiceTable = ({
         onClose={() => setValidationModalOpen(false)}
         invoice={selectedInvoice}
         onValidate={handleValidation}
+        onValidationSuccess={handleValidationSuccess}
       />
 
       {/* Submission Details Modal */}
