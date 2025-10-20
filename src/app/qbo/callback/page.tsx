@@ -37,7 +37,7 @@ function CallbackContent() {
         if (data.success) {
           setMessage(`Successfully connected ${data.company.name}!`);
 
-          // setTokens(data.tokens);
+          setTokens(data.tokens);
 
           if (data.user) {
             const userData = {

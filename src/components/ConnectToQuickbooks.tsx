@@ -39,9 +39,8 @@ export default function ConnectToQuickbooks() {
             );
 
             // alert(result.authUrl);
-            console.log(result);
-            setTokens(result?.tokens);
-            
+            console.log(result, "tokeeeeeeen");
+            // setTokens(result?.tokens);
 
             // if (result.authUrl && localStorage.getItem("auth_tokens")) {
             //   setTimeout(() => {

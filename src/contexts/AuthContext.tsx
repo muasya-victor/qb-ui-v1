@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.success) {
 
-        // apiService.setTokens(response.tokens);
+        apiService.setTokens(response.tokens);
 
         if (response.is_connected && response.company) {
           return { success: true, needsConnection: false };
@@ -161,7 +161,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     setUser: setUserData,
-    // setTokens,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
