@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCompany } from "../../../contexts/CompanyContext";
@@ -15,12 +15,15 @@ function CallbackContent() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [showReturnButton, setShowReturnButton] = useState(false);
-  const [hasProcessed, setHasProcessed] = useState(false);
+
+  // Use useRef instead of useState for hasProcessed to avoid re-renders
+  const hasProcessedRef = useRef(false);
+  const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
       // PREVENT MULTIPLE EXECUTIONS
-      if (hasProcessed) {
+      if (hasProcessedRef.current) {
         console.log("🛑 Callback already processed, skipping...");
         return;
       }
@@ -45,7 +48,7 @@ function CallbackContent() {
       }
 
       try {
-        setHasProcessed(true); // MARK AS PROCESSED
+        hasProcessedRef.current = true; // MARK AS PROCESSED
         console.log("🔄 Starting OAuth callback processing...");
 
         const data: CallbackResponse = await apiService.handleCallback({
@@ -90,7 +93,14 @@ function CallbackContent() {
           console.log(
             "✅ OAuth flow completed successfully, redirecting to dashboard..."
           );
-          setTimeout(() => {
+
+          // Clear any existing timer
+          if (redirectTimerRef.current) {
+            clearTimeout(redirectTimerRef.current);
+          }
+
+          // Set new redirect timer
+          redirectTimerRef.current = setTimeout(() => {
             router.push("/dashboard/invoices");
           }, 2000);
         } else {
@@ -124,14 +134,14 @@ function CallbackContent() {
     };
 
     handleCallback();
-  }, [
-    searchParams,
-    router,
-    setUser,
-    setActiveCompany,
-    refreshCompanies,
-    hasProcessed,
-  ]);
+
+    // Cleanup function
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, [searchParams, router, setUser, setActiveCompany, refreshCompanies]); // Remove hasProcessed from dependencies
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
