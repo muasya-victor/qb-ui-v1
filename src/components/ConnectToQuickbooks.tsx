@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { toast } from "../lib/toast";
+import { toast } from "sonner";
 // import toast from "react-hot-toast";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -66,9 +66,6 @@ export default function ConnectToQuickbooks() {
       setMessage(errorMessage);
       toast.error(errorMessage);
     }
-
-
-
   };
 
   const handleRegistrationSuccess = () => {
