@@ -1,8 +1,5 @@
 "use client";
 import { useState } from "react";
-import { toast } from "sonner";
-// import toast from "react-hot-toast";
-
 import { useAuth } from "../contexts/AuthContext";
 import RegistrationForm from "./auth/RegistrationForm";
 
@@ -17,21 +14,19 @@ export default function ConnectToQuickbooks() {
 
   const handleConnect = async () => {
     if (!email || !email.includes("@")) {
-      toast.error("Please enter a valid email address.");
+      setMessage("Please enter a valid email address.");
       return;
     }
     if (!password) {
-      toast.error("Please enter your password.");
+      setMessage("Please enter your password.");
       return;
     }
 
     setMessage(null);
     setIsConnecting(true);
 
-    const loadingPromise = login(email.trim(), password.trim());
-
     try {
-      const result = await loadingPromise;
+      const result = await login(email.trim(), password.trim());
 
       if (result.success) {
         if (result.needsConnection) {
@@ -42,21 +37,21 @@ export default function ConnectToQuickbooks() {
 
           // Redirect to QuickBooks if authUrl and tokens exist
           if (result.authUrl && localStorage.getItem("auth_tokens")) {
-            toast.success("Login successful! Redirecting to QuickBooks...");
+            setMessage("Login successful! Redirecting to QuickBooks...");
             setTimeout(() => {
               window.location.href = result.authUrl;
             }, 1500);
           } else {
-            toast.success("Login successful!");
+            setMessage("Login successful!");
           }
         } else {
-          toast.success("Login successful! Redirecting to dashboard...");
+          setMessage("Login successful! Redirecting to dashboard...");
           setTimeout(() => {
             window.location.href = "/dashboard/invoices";
           }, 1000);
         }
       } else {
-        toast.error("Login failed. Please try again.");
+        setMessage("Login failed. Please try again.");
       }
     } catch (error) {
       const errorMessage =
@@ -64,7 +59,8 @@ export default function ConnectToQuickbooks() {
           ? error.message
           : "Could not connect. Please try again.";
       setMessage(errorMessage);
-      toast.error(errorMessage);
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -74,7 +70,12 @@ export default function ConnectToQuickbooks() {
     );
     setTimeout(() => {
       setMode("login");
+      setMessage(null); // Clear message after switching to login
     }, 2000);
+  };
+
+  const clearMessage = () => {
+    setMessage(null);
   };
 
   return (
@@ -84,7 +85,10 @@ export default function ConnectToQuickbooks() {
         {mode === "register" ? (
           <RegistrationForm
             onSuccess={handleRegistrationSuccess}
-            onSwitchToLogin={() => setMode("login")}
+            onSwitchToLogin={() => {
+              setMode("login");
+              clearMessage();
+            }}
           />
         ) : (
           <div className="w-full max-w-md">
@@ -107,7 +111,10 @@ export default function ConnectToQuickbooks() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearMessage();
+                  }}
                   placeholder="Enter your email"
                   className="w-full px-4 py-3 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-teal-500"
                   required
@@ -123,7 +130,10 @@ export default function ConnectToQuickbooks() {
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    clearMessage();
+                  }}
                   placeholder="Enter your password"
                   className="w-full px-4 py-3 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-teal-500"
                   required
@@ -131,18 +141,28 @@ export default function ConnectToQuickbooks() {
                 />
               </div>
 
-              {/* Success/Error Message */}
+              {/* Message Display */}
               {message && (
                 <div
                   className={`border rounded-md px-4 py-3 ${
                     message.includes("valid") ||
                     message.includes("error") ||
-                    message.includes("Could not")
+                    message.includes("Could not") ||
+                    message.includes("failed") ||
+                    message.includes("Please enter")
                       ? "bg-red-50 border-red-200 text-red-700"
                       : "bg-green-50 border-green-200 text-green-700"
                   }`}
                 >
-                  <p className="text-sm">{message}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm flex-1">{message}</p>
+                    <button
+                      onClick={clearMessage}
+                      className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -185,7 +205,10 @@ export default function ConnectToQuickbooks() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setMode("register")}
+                  onClick={() => {
+                    setMode("register");
+                    clearMessage();
+                  }}
                   className="text-sm text-teal-600 hover:text-teal-700 font-medium"
                   disabled={isConnecting}
                 >
