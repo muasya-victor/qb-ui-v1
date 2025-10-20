@@ -3,7 +3,14 @@
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileText, BarChart3, Wallet } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  BarChart3,
+  Wallet,
+  Origami,
+} from "lucide-react";
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
@@ -33,6 +40,12 @@ const Sidebar: React.FC = () => {
       icon: Users,
       label: "Customers",
       path: "/dashboard/customers",
+    },
+    {
+      id: "company",
+      icon: Origami,
+      label: "Company",
+      path: "/dashboard/companies",
     },
   ];
 

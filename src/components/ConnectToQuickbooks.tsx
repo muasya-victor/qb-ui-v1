@@ -36,14 +36,15 @@ export default function ConnectToQuickbooks() {
               result.message ||
                 "Please connect your QuickBooks company to continue."
             );
-            
+
+            // alert(result.authUrl);
 
             if (result.authUrl && localStorage.getItem("auth_tokens")) {
               setTimeout(() => {
                 window.location.href = result.authUrl!;
               }, 1500);
             }
-            return 'Login successful! Redirecting to QuickBooks...';
+            return "Login successful! Redirecting to QuickBooks...";
           } else {
             setTimeout(() => {
               window.location.href = "/dashboard/invoices";

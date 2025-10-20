@@ -104,7 +104,7 @@ class ApiService {
     };
   }
 
-  private getAccessToken(): string | null {
+  public getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
 
     const authData = localStorage.getItem("auth_tokens");
