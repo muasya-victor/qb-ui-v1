@@ -7,6 +7,7 @@ import RegistrationForm from "./auth/RegistrationForm";
 export default function ConnectToQuickbooks() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState<string>("");
+  const { setUser, setTokens } = useAuth();
   const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -39,6 +40,7 @@ export default function ConnectToQuickbooks() {
 
             // alert(result.authUrl);
             console.log(result);
+            setTokens(result?.tokens);
             
 
             // if (result.authUrl && localStorage.getItem("auth_tokens")) {
