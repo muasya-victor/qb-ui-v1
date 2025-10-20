@@ -89,6 +89,7 @@ interface DisconnectResponse {
 
 class CompanyService {
   private baseURL: string;
+  private requestCache: Map<string, Promise<any>> = new Map();
 
   constructor() {
     this.baseURL =
@@ -96,106 +97,105 @@ class CompanyService {
   }
 
   private getAuthHeaders() {
-    const token = apiService.isAuthenticated() ? this.getAuthToken() : null;
+    const token = apiService.isAuthenticated()
+      ? apiService.getAccessToken()
+      : null;
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
-  private getAuthToken(): string | null {
-    return apiService.getAccessToken();
+  private async makeRequest<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const cacheKey = `${url}-${JSON.stringify(options)}`;
+
+    // Prevent duplicate simultaneous requests
+    if (this.requestCache.has(cacheKey)) {
+      console.log(`🔄 Using cached request for: ${url}`);
+      return this.requestCache.get(cacheKey) as Promise<T>;
+    }
+
+    console.log(`🔄 Making new request to: ${url}`);
+    const requestPromise = this._makeRequest<T>(url, options);
+    this.requestCache.set(cacheKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      return result;
+    } finally {
+      // Clear cache after a short delay
+      setTimeout(() => {
+        this.requestCache.delete(cacheKey);
+      }, 1000);
+    }
+  }
+
+  private async _makeRequest<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const response = await fetch(url, {
+      ...options,
+      headers: this.getAuthHeaders(),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   // Company CRUD Operations
   async createCompany(data: CreateCompanyRequest): Promise<CompanyResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/companies/`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error creating company:", error);
-      throw error;
-    }
+    return this.makeRequest<CompanyResponse>(`${this.baseURL}/companies/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   async getMyCompanies(): Promise<CompaniesResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/companies/`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      throw error;
-    }
+    return this.makeRequest<CompaniesResponse>(`${this.baseURL}/companies/`, {
+      method: "GET",
+    });
   }
 
   async getCompany(companyId: string): Promise<CompanyResponse> {
     try {
       console.log("🔄 [CompanyService] Fetching company with ID:", companyId);
-      console.log(
-        "🔄 [CompanyService] Full URL:",
-        `${this.baseURL}/companies/${companyId}/`
+
+      const response = await this.makeRequest<any>(
+        `${this.baseURL}/companies/${companyId}/`,
+        {
+          method: "GET",
+        }
       );
 
-      const response = await fetch(`${this.baseURL}/companies/${companyId}/`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      console.log("📡 [CompanyService] Response status:", response.status);
-      console.log("📡 [CompanyService] Response ok:", response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          "❌ [CompanyService] HTTP error:",
-          response.status,
-          errorText
-        );
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      console.log("✅ [CompanyService] Raw response data:", responseData);
+      console.log("✅ [CompanyService] Raw response data:", response);
 
       // Handle different response structures
       let companyData: Company;
 
-      if (responseData.company) {
+      if (response.company) {
         // Structure: {success: true, company: {...}}
-        companyData = responseData.company;
-      } else if (responseData.id) {
+        companyData = response.company;
+      } else if (response.id) {
         // Structure: company object directly {...}
         console.log(
           "🔄 [CompanyService] Detected direct company object response"
         );
-        companyData = responseData;
-      } else if (responseData.data) {
+        companyData = response;
+      } else if (response.data) {
         // Structure: {data: {...}}
-        companyData = responseData.data;
+        companyData = response.data;
       } else {
         console.warn(
           "⚠️ [CompanyService] Unexpected response structure:",
-          responseData
+          response
         );
         throw new Error("Unexpected response structure from server");
       }
@@ -216,255 +216,125 @@ class CompanyService {
     companyId: string,
     data: UpdateCompanyRequest
   ): Promise<CompanyResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/companies/${companyId}/`, {
+    return this.makeRequest<CompanyResponse>(
+      `${this.baseURL}/companies/${companyId}/`,
+      {
         method: "PATCH",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
         body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error updating company:", error);
-      throw error;
-    }
+    );
   }
 
   async deleteCompany(
     companyId: string
   ): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${this.baseURL}/companies/${companyId}/`, {
+    return this.makeRequest<{ success: boolean; message: string }>(
+      `${this.baseURL}/companies/${companyId}/`,
+      {
         method: "DELETE",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error deleting company:", error);
-      throw error;
-    }
+    );
   }
 
   // Company Actions
   async disconnectCompany(companyId: string): Promise<DisconnectResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/companies/${companyId}/disconnect/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<DisconnectResponse>(
+      `${this.baseURL}/companies/${companyId}/disconnect/`,
+      {
+        method: "POST",
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error disconnecting company:", error);
-      throw error;
-    }
+    );
   }
 
   async refreshCompanyInfo(companyId: string): Promise<CompanyResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/companies/${companyId}/refresh-info/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<CompanyResponse>(
+      `${this.baseURL}/companies/${companyId}/refresh-info/`,
+      {
+        method: "POST",
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error refreshing company info:", error);
-      throw error;
-    }
+    );
   }
 
   // Membership Management
   async getMyMemberships(): Promise<MembershipsResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/memberships/`, {
+    return this.makeRequest<MembershipsResponse>(
+      `${this.baseURL}/memberships/`,
+      {
         method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching memberships:", error);
-      throw error;
-    }
+    );
   }
 
   async addMember(
     companyId: string,
     data: AddMemberRequest
   ): Promise<MembershipResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/companies/${companyId}/add-member/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-          body: JSON.stringify(data),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<MembershipResponse>(
+      `${this.baseURL}/companies/${companyId}/add-member/`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error adding member:", error);
-      throw error;
-    }
+    );
   }
 
   async updateMember(
     membershipId: string,
     data: UpdateMemberRequest
   ): Promise<MembershipResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/memberships/${membershipId}/`,
-        {
-          method: "PATCH",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-          body: JSON.stringify(data),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<MembershipResponse>(
+      `${this.baseURL}/memberships/${membershipId}/`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error updating membership:", error);
-      throw error;
-    }
+    );
   }
 
   async removeMember(
     membershipId: string
   ): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/memberships/${membershipId}/`,
-        {
-          method: "DELETE",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<{ success: boolean; message: string }>(
+      `${this.baseURL}/memberships/${membershipId}/`,
+      {
+        method: "DELETE",
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error removing member:", error);
-      throw error;
-    }
+    );
   }
 
   async setDefaultCompany(membershipId: string): Promise<MembershipResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/memberships/${membershipId}/set-default/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    return this.makeRequest<MembershipResponse>(
+      `${this.baseURL}/memberships/${membershipId}/set-default/`,
+      {
+        method: "POST",
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error setting default company:", error);
-      throw error;
-    }
+    );
   }
 
   // Active Company Management
   async setActiveCompany(
     companyId: string
   ): Promise<{ success: boolean; message: string; active_company: Company }> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/active-company/set-active/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-          body: JSON.stringify({ company_id: companyId }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error setting active company:", error);
-      throw error;
-    }
+    return this.makeRequest<{
+      success: boolean;
+      message: string;
+      active_company: Company;
+    }>(`${this.baseURL}/active-company/set-active/`, {
+      method: "POST",
+      body: JSON.stringify({ company_id: companyId }),
+    });
   }
 
   async getActiveCompany(): Promise<{
     success: boolean;
     active_company: Company;
   }> {
-    try {
-      const response = await fetch(`${this.baseURL}/active-company/`, {
+    return this.makeRequest<{ success: boolean; active_company: Company }>(
+      `${this.baseURL}/active-company/`,
+      {
         method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching active company:", error);
-      throw error;
-    }
+    );
   }
 
   // Utility Methods
@@ -504,6 +374,11 @@ class CompanyService {
     } catch (error) {
       return false;
     }
+  }
+
+  // Clear all cached requests (useful for logout)
+  clearCache(): void {
+    this.requestCache.clear();
   }
 }
 

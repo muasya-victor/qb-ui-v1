@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCompany } from "../../../contexts/CompanyContext";
-import apiService from "../../../services/apiService";
+import apiService, { CallbackResponse } from "../../../services/apiService";
 
 function CallbackContent() {
   const searchParams = useSearchParams();
@@ -15,9 +15,16 @@ function CallbackContent() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [showReturnButton, setShowReturnButton] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      // PREVENT MULTIPLE EXECUTIONS
+      if (hasProcessed) {
+        console.log("🛑 Callback already processed, skipping...");
+        return;
+      }
+
       const code = searchParams.get("code");
       const state = searchParams.get("state");
       const realmId = searchParams.get("realmId");
@@ -38,30 +45,47 @@ function CallbackContent() {
       }
 
       try {
+        setHasProcessed(true); // MARK AS PROCESSED
         console.log("🔄 Starting OAuth callback processing...");
 
-        const data = await apiService.handleCallback({ code, state, realmId });
+        const data: CallbackResponse = await apiService.handleCallback({
+          code,
+          state,
+          realmId,
+        });
         console.log("✅ Callback response:", data);
 
         if (data.success) {
-          setMessage(`Successfully connected ${data.company.name}!`);
+          if (data.duplicate) {
+            setMessage(
+              "QuickBooks connection already completed. Redirecting..."
+            );
+          } else {
+            // SAFELY ACCESS COMPANY NAME WITH FALLBACK
+            const companyName = data.company?.name || "QuickBooks Company";
+            setMessage(`Successfully connected ${companyName}!`);
+          }
 
-          if (data.user) {
+          // SAFELY HANDLE USER DATA
+          if (data.user && !data.duplicate) {
             const userData = {
               id: data.user.email,
               email: data.user.email,
-              first_name: data.user.givenName,
-              last_name: data.user.familyName,
+              first_name: data.user.givenName || "",
+              last_name: data.user.familyName || "",
             };
             console.log("👤 Setting user data:", userData);
             setUser(userData);
           }
 
-          console.log("🏢 Setting active company:", data.company);
-          setActiveCompany(data.company);
+          // SAFELY HANDLE COMPANY DATA
+          if (data.company && !data.duplicate) {
+            console.log("🏢 Setting active company:", data.company);
+            setActiveCompany(data.company);
 
-          console.log("🔄 Refreshing companies list...");
-          await refreshCompanies();
+            console.log("🔄 Refreshing companies list...");
+            await refreshCompanies();
+          }
 
           console.log(
             "✅ OAuth flow completed successfully, redirecting to dashboard..."
@@ -70,8 +94,10 @@ function CallbackContent() {
             router.push("/dashboard/invoices");
           }, 2000);
         } else {
-          console.error("❌ Callback failed:", data.error);
-          setMessage(`Failed to connect QuickBooks: ${data.error}`);
+          console.error("❌ Callback failed:", data.message || "Unknown error");
+          setMessage(
+            `Failed to connect QuickBooks: ${data.message || "Unknown error"}`
+          );
           setShowReturnButton(true);
         }
       } catch (error: any) {
@@ -80,7 +106,6 @@ function CallbackContent() {
           error.message || "Network error while connecting to QuickBooks.";
         setMessage(errorMessage);
 
-        // If it's a CSRF/state mismatch error, provide more specific guidance
         if (
           errorMessage.toLowerCase().includes("state") ||
           errorMessage.toLowerCase().includes("csrf") ||
@@ -99,7 +124,14 @@ function CallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router, setUser, setActiveCompany, refreshCompanies]);
+  }, [
+    searchParams,
+    router,
+    setUser,
+    setActiveCompany,
+    refreshCompanies,
+    hasProcessed,
+  ]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -114,23 +146,29 @@ function CallbackContent() {
           <div className="flex flex-col items-center space-y-4">
             <div
               className={`text-4xl ${
-                message?.includes("Successfully")
+                message?.includes("Successfully") ||
+                message?.includes("already completed")
                   ? "text-green-600"
                   : "text-red-600"
               }`}
             >
-              {message?.includes("Successfully") ? "✅" : "❌"}
+              {message?.includes("Successfully") ||
+              message?.includes("already completed")
+                ? "✅"
+                : "❌"}
             </div>
             <p
               className={`${
-                message?.includes("Successfully")
+                message?.includes("Successfully") ||
+                message?.includes("already completed")
                   ? "text-green-600"
                   : "text-red-600"
               }`}
             >
               {message}
             </p>
-            {message?.includes("Successfully") && (
+            {(message?.includes("Successfully") ||
+              message?.includes("already completed")) && (
               <p className="text-sm text-gray-500">
                 Redirecting to dashboard...
               </p>

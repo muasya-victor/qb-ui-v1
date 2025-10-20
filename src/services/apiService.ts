@@ -15,10 +15,10 @@ interface Company {
   name: string;
   realm_id: string;
   is_connected: boolean;
-  is_default: boolean;
-  role: string;
-  is_active: boolean;
-  created_at: string;
+  is_default?: boolean;
+  role?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 interface RegisterRequest {
@@ -74,22 +74,26 @@ interface CallbackRequest {
 
 interface CallbackResponse {
   success: boolean;
-  company: Company;
-  membership: {
+  company?: Company;
+  membership?: {
     is_default: boolean;
     role: string;
   };
-  active_company: string;
-  user: {
+  active_company?: string;
+  user?: {
     email: string;
-    givenName: string;
-    familyName: string;
+    givenName?: string;
+    familyName?: string;
   };
-  tokens: TokenData;
+  tokens?: TokenData;
+  duplicate?: boolean;
+  message?: string;
+  api_access_ok?: boolean;
 }
 
 class ApiService {
   private baseUrl: string;
+  private callbackPromise: Promise<CallbackResponse> | null = null;
 
   constructor() {
     this.baseUrl =
@@ -168,7 +172,7 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/auth-url/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include", // Include cookies for session management
+      credentials: "include",
       body: JSON.stringify(data),
     });
     return this.handleResponse<AuthUrlResponse>(response);
@@ -195,20 +199,54 @@ class ApiService {
   }
 
   async handleCallback(data: CallbackRequest): Promise<CallbackResponse> {
+    // Prevent multiple simultaneous callback requests
+    if (this.callbackPromise) {
+      console.log("🔄 Using existing callback request");
+      return this.callbackPromise;
+    }
+
+    console.log("🔄 Starting new callback request");
+    this.callbackPromise = this._makeCallbackRequest(data);
+
+    try {
+      const result = await this.callbackPromise;
+      return result;
+    } finally {
+      // Clear the promise after completion
+      setTimeout(() => {
+        this.callbackPromise = null;
+      }, 1000);
+    }
+  }
+
+  private async _makeCallbackRequest(
+    data: CallbackRequest
+  ): Promise<CallbackResponse> {
+    const token = this.getAccessToken();
+
+    console.log(
+      "🔐 Making callback request with token:",
+      token ? `${token.substring(0, 20)}...` : "NO TOKEN FOUND"
+    );
+
     // Try with auth headers first
     let response = await fetch(`${this.baseUrl}/callback/`, {
       method: "POST",
-      headers: this.getAuthHeaders(),
-      credentials: "include", // Include cookies for session management
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      credentials: "include",
       body: JSON.stringify(data),
     });
 
     // If unauthorized, try without auth headers (for cases where token might be expired)
     if (response.status === 401) {
+      console.log("🔄 Retrying callback without auth header");
       response = await fetch(`${this.baseUrl}/callback/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // Include cookies for session management
+        credentials: "include",
         body: JSON.stringify(data),
       });
     }
@@ -221,7 +259,7 @@ class ApiService {
       const response = await fetch(`${this.baseUrl}/logout/`, {
         method: "POST",
         headers: this.getAuthHeaders(),
-        credentials: "include", // Include cookies for session management
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -257,4 +295,13 @@ class ApiService {
 }
 
 export default new ApiService();
-export type { User, Company, TokenData, RegisterRequest, AuthUrlRequest, CompaniesResponse };
+export type {
+  User,
+  Company,
+  TokenData,
+  RegisterRequest,
+  AuthUrlRequest,
+  CompaniesResponse,
+  CallbackResponse,
+  CallbackRequest,
+};
