@@ -59,15 +59,18 @@ function CallbackContent() {
         console.log("✅ Callback response:", data);
 
         if (data.success) {
+          let finalMessage = "";
+
           if (data.duplicate) {
-            setMessage(
-              "QuickBooks connection already completed. Redirecting..."
-            );
+            finalMessage =
+              "QuickBooks connection already completed. Redirecting...";
           } else {
             // SAFELY ACCESS COMPANY NAME WITH FALLBACK
             const companyName = data.company?.name || "QuickBooks Company";
-            setMessage(`Successfully connected ${companyName}!`);
+            finalMessage = `Successfully connected ${companyName}!`;
           }
+
+          setMessage(finalMessage);
 
           // SAFELY HANDLE USER DATA
           if (data.user && !data.duplicate) {
@@ -91,7 +94,7 @@ function CallbackContent() {
           }
 
           console.log(
-            "✅ OAuth flow completed successfully, redirecting to dashboard..."
+            "✅ OAuth flow completed successfully, preparing redirect..."
           );
 
           // Clear any existing timer
@@ -99,10 +102,11 @@ function CallbackContent() {
             clearTimeout(redirectTimerRef.current);
           }
 
-          // Set new redirect timer
+          // Set new redirect timer - use a shorter timeout
           redirectTimerRef.current = setTimeout(() => {
+            console.log("🚀 Redirecting to dashboard...");
             router.push("/dashboard/invoices");
-          }, 2000);
+          }, 1500); // Reduced from 2000 to 1500ms
         } else {
           console.error("❌ Callback failed:", data.message || "Unknown error");
           setMessage(
@@ -141,7 +145,13 @@ function CallbackContent() {
         clearTimeout(redirectTimerRef.current);
       }
     };
-  }, [searchParams, router, setUser, setActiveCompany, refreshCompanies]); // Remove hasProcessed from dependencies
+  }, [searchParams, router, setUser, setActiveCompany, refreshCompanies]);
+
+  // Add a manual redirect button as fallback
+  const handleManualRedirect = () => {
+    console.log("🚀 Manual redirect to dashboard...");
+    router.push("/dashboard/invoices");
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -179,9 +189,18 @@ function CallbackContent() {
             </p>
             {(message?.includes("Successfully") ||
               message?.includes("already completed")) && (
-              <p className="text-sm text-gray-500">
-                Redirecting to dashboard...
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500">
+                  Redirecting to dashboard...
+                </p>
+                {/* Manual redirect button as fallback */}
+                <button
+                  onClick={handleManualRedirect}
+                  className="mt-2 px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors text-sm"
+                >
+                  Click here if not redirected
+                </button>
+              </div>
             )}
             {showReturnButton && (
               <button
