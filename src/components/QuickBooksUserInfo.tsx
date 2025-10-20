@@ -46,13 +46,13 @@ export default function QuickBooksUserInfo() {
     <div className="p-4 border rounded-md">
       <h2 className="text-lg font-semibold mb-2">QuickBooks User Info</h2>
 
-      <input
+      {/* <input
         type="text"
         placeholder="Paste access token here"
         value={token}
         onChange={(e) => setToken(e.target.value)}
         className="w-full border px-2 py-1 mb-2"
-      />
+      /> */}
 
       <button
         onClick={fetchUserInfo}
