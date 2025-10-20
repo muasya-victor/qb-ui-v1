@@ -42,11 +42,11 @@ export default function ConnectToQuickbooks() {
             console.log(result, "tokeeeeeeen");
             // setTokens(result?.tokens);
 
-            // if (result.authUrl && localStorage.getItem("auth_tokens")) {
-            //   setTimeout(() => {
-            //     window.location.href = result.authUrl!;
-            //   }, 1500);
-            // }
+            if (result.authUrl && localStorage.getItem("auth_tokens")) {
+              setTimeout(() => {
+                window.location.href = result.authUrl!;
+              }, 1500);
+            }
             return "Login successful! Redirecting to QuickBooks...";
           } else {
             setTimeout(() => {
