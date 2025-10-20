@@ -10,7 +10,9 @@ import {
   FileText,
   Download,
   Share,
+  QrCode,
 } from "lucide-react";
+import QRCode from "react-qr-code";
 
 export interface InvoiceLineItem {
   id: string;
@@ -45,6 +47,17 @@ export interface CompanyInfo {
   };
 }
 
+export interface KRASubmission {
+  id: string;
+  kra_invoice_number: number;
+  trd_invoice_no: string;
+  status: string;
+  qr_code_data?: string;
+  receipt_signature?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Invoice {
   id: string;
   qb_invoice_id: string;
@@ -68,6 +81,8 @@ export interface Invoice {
   country_of_export?: string;
   reason_for_export?: string;
   country_of_destination?: string;
+  // KRA submission
+  kra_submission?: KRASubmission;
 }
 
 interface InvoiceDisplayProps {
@@ -120,6 +135,16 @@ export default function InvoiceDisplay({
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const handleOpenReceipt = () => {
+    if (invoice.kra_submission?.qr_code_data) {
+      window.open(
+        invoice.kra_submission.qr_code_data,
+        "_blank",
+        "noopener,noreferrer"
+      );
     }
   };
 
@@ -398,9 +423,27 @@ export default function InvoiceDisplay({
           </div>
         </div>
 
+        {/* KRA QR Code Section */}
+        {invoice.kra_submission?.qr_code_data && (
+          <div className="mt-8 pt-6 ">
+            <div className="">
+              <QRCode
+                value={invoice.kra_submission.qr_code_data}
+                size={150}
+                style={{
+                  height: "auto",
+                  maxWidth: "100px",
+                  width: "100px",
+                }}
+                viewBox="0 0 256 256"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Notes Section */}
         {(invoice.customer_memo || invoice.private_note) && (
-          <div className="mt-8 pt-6 border-t border-gray-300">
+          <div className="mt-8 pt-6 border-t border-gray-300 hidden">
             <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
               <FileText className="w-5 h-5 mr-2 text-gray-600" />
               Notes

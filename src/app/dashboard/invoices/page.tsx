@@ -68,21 +68,10 @@ const InvoicesPage: React.FC = () => {
     // This could open a modal for selecting multiple invoices
   };
 
-
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Invoices
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage your invoices and validate with KRA for fiscal compliance
-            {activeCompany && ` • ${activeCompany.name}`}
-          </p>
-        </div>
         <div className="mt-4 flex sm:mt-0 sm:ml-4">
           {kraConfigStatus.configured && activeCompany && (
             <button
@@ -107,8 +96,6 @@ const InvoicesPage: React.FC = () => {
           )}
         </div>
       </div>
-
-
 
       {/* Invoice Manager */}
       {activeCompany ? (
