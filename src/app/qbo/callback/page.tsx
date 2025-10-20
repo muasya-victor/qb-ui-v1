@@ -217,6 +217,7 @@ function CallbackContent() {
   );
 }
 
+
 export default function QboCallback() {
   return (
     <Suspense
