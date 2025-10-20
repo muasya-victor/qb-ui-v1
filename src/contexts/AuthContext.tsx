@@ -31,7 +31,7 @@ interface AuthContextType {
   }) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
-  setTokens: (tokens: TokenData) => void;
+  setTokens: (tokens: TokenData) => void; // This is in the interface but not implemented
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,7 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiService.getAuthUrl({ email, password });
 
       if (response.success) {
-
         apiService.setTokens(response.tokens);
 
         if (response.is_connected && response.company) {
@@ -140,9 +139,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // const setTokens = (tokens: TokenData) => {
-  //   apiService.setTokens(tokens);
-  // };
+  // Uncomment and implement setTokens function
+  const setTokens = (tokens: TokenData) => {
+    apiService.setTokens(tokens);
+  };
 
   const setUserData = (userData: User | null) => {
     setUser(userData);
@@ -161,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     setUser: setUserData,
+    setTokens, // Add this to the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
