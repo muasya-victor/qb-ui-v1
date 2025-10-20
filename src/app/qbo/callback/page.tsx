@@ -22,17 +22,26 @@ function CallbackContent() {
       const state = searchParams.get("state");
       const realmId = searchParams.get("realmId");
 
+      console.log("🔍 Callback parameters received:", {
+        code: code ? `${code.substring(0, 10)}...` : "None",
+        state,
+        realmId,
+      });
+
       if (!code || !state || !realmId) {
+        const errorMsg = `Missing parameters from QuickBooks. Code: ${!!code}, State: ${!!state}, RealmId: ${!!realmId}`;
+        console.error(errorMsg);
         setMessage("Missing parameters from QuickBooks.");
         setLoading(false);
+        setShowReturnButton(true);
         return;
       }
 
       try {
-        console.log("Callback parameters:", { code, state, realmId });
+        console.log("🔄 Starting OAuth callback processing...");
 
         const data = await apiService.handleCallback({ code, state, realmId });
-        console.log("Callback response:", data);
+        console.log("✅ Callback response:", data);
 
         if (data.success) {
           setMessage(`Successfully connected ${data.company.name}!`);
@@ -44,21 +53,29 @@ function CallbackContent() {
               first_name: data.user.givenName,
               last_name: data.user.familyName,
             };
+            console.log("👤 Setting user data:", userData);
             setUser(userData);
           }
 
+          console.log("🏢 Setting active company:", data.company);
           setActiveCompany(data.company);
 
+          console.log("🔄 Refreshing companies list...");
           await refreshCompanies();
 
+          console.log(
+            "✅ OAuth flow completed successfully, redirecting to dashboard..."
+          );
           setTimeout(() => {
             router.push("/dashboard/invoices");
           }, 2000);
         } else {
-          setMessage("Failed to connect QuickBooks.");
+          console.error("❌ Callback failed:", data.error);
+          setMessage(`Failed to connect QuickBooks: ${data.error}`);
+          setShowReturnButton(true);
         }
       } catch (error: any) {
-        console.error("Error in callback:", error);
+        console.error("💥 Error in callback:", error);
         const errorMessage =
           error.message || "Network error while connecting to QuickBooks.";
         setMessage(errorMessage);
@@ -66,11 +83,14 @@ function CallbackContent() {
         // If it's a CSRF/state mismatch error, provide more specific guidance
         if (
           errorMessage.toLowerCase().includes("state") ||
-          errorMessage.toLowerCase().includes("csrf")
+          errorMessage.toLowerCase().includes("csrf") ||
+          errorMessage.toLowerCase().includes("oauth")
         ) {
           setMessage(
-            "Security validation failed. Please try logging in again."
+            "Security validation failed. This might be because the login session expired. Please try logging in again."
           );
+          setShowReturnButton(true);
+        } else {
           setShowReturnButton(true);
         }
       } finally {
@@ -88,6 +108,7 @@ function CallbackContent() {
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin h-10 w-10 border-4 border-teal-600 border-t-transparent rounded-full"></div>
             <p className="text-gray-600">Connecting to QuickBooks...</p>
+            <p className="text-xs text-gray-500">This may take a few moments</p>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-4">
@@ -136,7 +157,7 @@ export default function QboCallback() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin h-10 w-10 border-4 border-teal-600 border-t-transparent rounded-full"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600">Loading callback...</p>
           </div>
         </div>
       }
