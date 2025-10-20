@@ -37,11 +37,6 @@ export default function QuickBooksCallback() {
 
         console.log("QuickBooks connected:", data);
 
-        // Store auth tokens
-        // if (data.tokens) {
-        //   apiService.setTokens(data.tokens);
-        // }
-
         // Refresh company list to show new connection
         await refreshCompanies();
 

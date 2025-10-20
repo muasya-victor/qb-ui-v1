@@ -9,7 +9,7 @@ import apiService from "../../../services/apiService";
 function CallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { setUser, setTokens } = useAuth();
+  const { setUser } = useAuth();
   const { setActiveCompany, refreshCompanies } = useCompany();
 
   const [loading, setLoading] = useState(true);
@@ -29,22 +29,20 @@ function CallbackContent() {
       }
 
       try {
-        console.log('Callback parameters:', { code, state, realmId });
+        console.log("Callback parameters:", { code, state, realmId });
 
         const data = await apiService.handleCallback({ code, state, realmId });
-        console.log('Callback response:', data);
+        console.log("Callback response:", data);
 
         if (data.success) {
           setMessage(`Successfully connected ${data.company.name}!`);
-
-          setTokens(data.tokens);
 
           if (data.user) {
             const userData = {
               id: data.user.email,
               email: data.user.email,
               first_name: data.user.givenName,
-              last_name: data.user.familyName
+              last_name: data.user.familyName,
             };
             setUser(userData);
           }
@@ -61,12 +59,18 @@ function CallbackContent() {
         }
       } catch (error: any) {
         console.error("Error in callback:", error);
-        const errorMessage = error.message || "Network error while connecting to QuickBooks.";
+        const errorMessage =
+          error.message || "Network error while connecting to QuickBooks.";
         setMessage(errorMessage);
 
         // If it's a CSRF/state mismatch error, provide more specific guidance
-        if (errorMessage.toLowerCase().includes('state') || errorMessage.toLowerCase().includes('csrf')) {
-          setMessage("Security validation failed. Please try logging in again.");
+        if (
+          errorMessage.toLowerCase().includes("state") ||
+          errorMessage.toLowerCase().includes("csrf")
+        ) {
+          setMessage(
+            "Security validation failed. Please try logging in again."
+          );
           setShowReturnButton(true);
         }
       } finally {
@@ -75,7 +79,7 @@ function CallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router, setUser, setTokens, setActiveCompany, refreshCompanies]);
+  }, [searchParams, router, setUser, setActiveCompany, refreshCompanies]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -87,14 +91,22 @@ function CallbackContent() {
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-4">
-            <div className={`text-4xl ${
-              message?.includes("Successfully") ? "text-green-600" : "text-red-600"
-            }`}>
+            <div
+              className={`text-4xl ${
+                message?.includes("Successfully")
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
               {message?.includes("Successfully") ? "✅" : "❌"}
             </div>
-            <p className={`${
-              message?.includes("Successfully") ? "text-green-600" : "text-red-600"
-            }`}>
+            <p
+              className={`${
+                message?.includes("Successfully")
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
               {message}
             </p>
             {message?.includes("Successfully") && (
@@ -104,7 +116,7 @@ function CallbackContent() {
             )}
             {showReturnButton && (
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push("/")}
                 className="mt-4 px-6 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
               >
                 Return to Login
@@ -119,14 +131,16 @@ function CallbackContent() {
 
 export default function QboCallback() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin h-10 w-10 border-4 border-teal-600 border-t-transparent rounded-full"></div>
-          <p className="text-gray-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin h-10 w-10 border-4 border-teal-600 border-t-transparent rounded-full"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <CallbackContent />
     </Suspense>
   );

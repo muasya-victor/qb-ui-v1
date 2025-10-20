@@ -6,7 +6,7 @@ import RegistrationForm from "./auth/RegistrationForm";
 export default function ConnectToQuickbooks() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState<string>("");
-  const { setUser, setTokens } = useAuth();
+  const { setUser } = useAuth();
   const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
