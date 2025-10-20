@@ -26,57 +26,47 @@ export default function ConnectToQuickbooks() {
     setMessage(null);
     setIsConnecting(true);
 
-    const loadingPromise = login(email.trim(), password.trim());
-
-    // toast.promise(loadingPromise, {
-    //   loading: "Authenticating...",
-    //   success: (result) => {
-    //     if (result.success) {
-    //       if (result.needsConnection) {
-    //         setMessage(
-    //           result.message ||
-    //             "Please connect your QuickBooks company to continue."
-    //         );
-
-    //         // alert(result.authUrl);
-    //         console.log(result, "tokeeeeeeen");
-    //         // setTokens(result?.tokens);
-
-    //         if (result.authUrl && localStorage.getItem("auth_tokens")) {
-    //           setTimeout(() => {
-    //             window.location.href = result.authUrl!;
-    //           }, 1500);
-    //         }
-    //         return "Login successful! Redirecting to QuickBooks...";
-    //       } else {
-    //         setTimeout(() => {
-    //           window.location.href = "/dashboard/invoices";
-    //         }, 1000);
-    //         return "Login successful! Redirecting to dashboard...";
-    //       }
-    //     }
-    //     return "Login successful!";
-    //   },
-    //   error: (error) => {
-    //     const errorMessage =
-    //       error instanceof Error
-    //         ? error.message
-    //         : "Could not connect. Please try again.";
-    //     setMessage(errorMessage);
-    //     return errorMessage;
-    //   },
-    // });
     try {
-      const result = await loadingPromise;
-      toast.success("Login successful!");
-    } catch (error) {
-      toast.error("Could not connect.");
-    }
+      const result = await toast.promise(login(email.trim(), password.trim()), {
+        loading: "Authenticating...",
+        success: "Login successful!",
+        error: (error) => {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Could not connect. Please try again.";
+          setMessage(errorMessage);
+          return errorMessage;
+        },
+      });
 
-    try {
-      await loadingPromise;
+      // Handle successful login result
+      if (result.success) {
+        if (result.needsConnection) {
+          setMessage(
+            result.message ||
+              "Please connect your QuickBooks company to continue."
+          );
+
+          console.log(result, "tokeeeeeeen");
+
+          // Wait a bit before redirecting to show the message
+          if (result.authUrl && localStorage.getItem("auth_tokens")) {
+            setTimeout(() => {
+              window.location.href = result.authUrl;
+            }, 1500);
+            toast.success("Login successful! Redirecting to QuickBooks...");
+          }
+        } else {
+          setTimeout(() => {
+            window.location.href = "/dashboard/invoices";
+          }, 1000);
+          toast.success("Login successful! Redirecting to dashboard...");
+        }
+      }
     } catch (error: unknown) {
-      // Error is already handled by toast.promise
+      // Error is already handled by toast.promise, but we can add additional handling here if needed
+      console.error("Login failed:", error);
     } finally {
       setIsConnecting(false);
     }
