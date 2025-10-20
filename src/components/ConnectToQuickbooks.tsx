@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { toast } from "../lib/toast";
+// import toast from "react-hot-toast";
+
 import { useAuth } from "../contexts/AuthContext";
 import RegistrationForm from "./auth/RegistrationForm";
 
@@ -34,11 +36,11 @@ export default function ConnectToQuickbooks() {
       if (result.success) {
         if (result.needsConnection) {
           setMessage(
-            result.message || "Please connect your QuickBooks company to continue."
+            result.message ||
+              "Please connect your QuickBooks company to continue."
           );
 
-          console.log(result, "tokeeeeeeen");
-
+          // Redirect to QuickBooks if authUrl and tokens exist
           if (result.authUrl && localStorage.getItem("auth_tokens")) {
             toast.success("Login successful! Redirecting to QuickBooks...");
             setTimeout(() => {
@@ -66,13 +68,7 @@ export default function ConnectToQuickbooks() {
     }
 
 
-    try {
-      await loadingPromise;
-    } catch (error: unknown) {
-      // Error is already handled by toast.promise
-    } finally {
-      setIsConnecting(false);
-    }
+
   };
 
   const handleRegistrationSuccess = () => {
