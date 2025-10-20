@@ -26,47 +26,50 @@ export default function ConnectToQuickbooks() {
     setMessage(null);
     setIsConnecting(true);
 
-    try {
-      const result = await toast.promise(login(email.trim(), password.trim()), {
-        loading: "Authenticating...",
-        success: "Login successful!",
-        error: (error) => {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "Could not connect. Please try again.";
-          setMessage(errorMessage);
-          return errorMessage;
-        },
-      });
+    const loadingPromise = login(email.trim(), password.trim());
 
-      // Handle successful login result
+    try {
+      const result = await loadingPromise;
+
       if (result.success) {
         if (result.needsConnection) {
           setMessage(
-            result.message ||
-              "Please connect your QuickBooks company to continue."
+            result.message || "Please connect your QuickBooks company to continue."
           );
 
           console.log(result, "tokeeeeeeen");
 
-          // Wait a bit before redirecting to show the message
           if (result.authUrl && localStorage.getItem("auth_tokens")) {
+            toast.success("Login successful! Redirecting to QuickBooks...");
             setTimeout(() => {
               window.location.href = result.authUrl;
             }, 1500);
-            toast.success("Login successful! Redirecting to QuickBooks...");
+          } else {
+            toast.success("Login successful!");
           }
         } else {
+          toast.success("Login successful! Redirecting to dashboard...");
           setTimeout(() => {
             window.location.href = "/dashboard/invoices";
           }, 1000);
-          toast.success("Login successful! Redirecting to dashboard...");
         }
+      } else {
+        toast.error("Login failed. Please try again.");
       }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not connect. Please try again.";
+      setMessage(errorMessage);
+      toast.error(errorMessage);
+    }
+
+
+    try {
+      await loadingPromise;
     } catch (error: unknown) {
-      // Error is already handled by toast.promise, but we can add additional handling here if needed
-      console.error("Login failed:", error);
+      // Error is already handled by toast.promise
     } finally {
       setIsConnecting(false);
     }
