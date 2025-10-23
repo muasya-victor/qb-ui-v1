@@ -97,7 +97,7 @@ class ApiService {
 
   constructor() {
     this.baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+      process.env.NEXT_PUBLIC_API_BASE_URL || "http://212.47.77.18/api";
   }
 
   private getAuthHeaders(): Record<string, string> {
