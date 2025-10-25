@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Calendar,
   MapPin,
@@ -13,6 +13,10 @@ import {
   QrCode,
 } from "lucide-react";
 import QRCode from "react-qr-code";
+import companyService, {
+  Company,
+  UpdateCompanyRequest,
+} from "../../services/companyService";
 
 export interface InvoiceLineItem {
   id: string;
@@ -100,6 +104,7 @@ export default function InvoiceDisplay({
   onShare,
   className = "",
 }: InvoiceDisplayProps) {
+  const [activeCompany, setActiveCompany] = useState(null);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -108,6 +113,20 @@ export default function InvoiceDisplay({
       maximumFractionDigits: 2,
     }).format(amount);
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response: any = await companyService.getCurrentActiveCompany();
+
+        setActiveCompany(response[0]);
+      } catch (error) {
+        console.error("Error fetching active company:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -155,8 +174,8 @@ export default function InvoiceDisplay({
       className={`max-w-4xl mx-auto bg-white shadow-lg border border-gray-300 ${className}`}
     >
       {/* Header Section */}
-      <div className="border-b border-gray-300 p-8">
-        <div className="flex justify-between items-start mb-8">
+      <div className=" border-gray-300 p-8">
+        <div className="flex justify-between items-start">
           {/* Company Logo and Info - Left aligned */}
           <div className="flex-1">
             {companyInfo.logo_url && companyInfo.invoice_logo_enabled ? (
@@ -172,11 +191,8 @@ export default function InvoiceDisplay({
               </div>
             ) : (
               <div className="mb-4">
-                <div className="h-16 flex items-center justify-center bg-gray-100 border border-gray-300">
-                  <span className="text-lg font-bold text-gray-600">
-                    Replace with LOGO
-                  </span>
-                </div>
+                <div className="h-16 w-16 bg-[url('/next.svg')] bg-center bg-cover"></div>
+                {/* <img src={"/next.svg"} /> */}
               </div>
             )}
 
@@ -213,7 +229,7 @@ export default function InvoiceDisplay({
           </div>
 
           {/* Invoice Header - Right aligned */}
-          <div className="text-right">
+          <div className="text-right ">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               COMMERCIAL INVOICE
             </h2>
@@ -245,97 +261,41 @@ export default function InvoiceDisplay({
 
         {/* Divider */}
         <div className="border-t border-gray-300 my-6"></div>
-
-        {/* Exporter and Consignee Section */}
-        <div className="grid grid-cols-2 gap-8 mb-6">
-          {/* Exporter */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-              Exporter
-            </h3>
-            <div className="bg-gray-50 p-4 border border-gray-200 rounded">
-              <p className="text-gray-900 font-medium">
-                {invoice.customer_name}
-              </p>
-              {invoice.exporter_info && (
-                <p className="text-gray-600 text-sm mt-1">
-                  {invoice.exporter_info}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Consignee */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-              Consignee
-            </h3>
-            <div className="bg-gray-50 p-4 border border-gray-200 rounded">
-              <p className="text-gray-900 font-medium">
-                {invoice.customer_name}
-              </p>
-              {invoice.consignee_info && (
-                <p className="text-gray-600 text-sm mt-1">
-                  {invoice.consignee_info}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Export Information */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
-          <div>
-            <span className="text-sm font-semibold text-gray-700">
-              Country of export:
-            </span>
-            <p className="text-gray-900 mt-1">
-              {invoice.country_of_export || "United States"}
-            </p>
-          </div>
-          <div>
-            <span className="text-sm font-semibold text-gray-700">
-              Reason for export:
-            </span>
-            <p className="text-gray-900 mt-1">
-              {invoice.reason_for_export || "Sale"}
-            </p>
-          </div>
-          <div>
-            <span className="text-sm font-semibold text-gray-700">
-              Country of destination:
-            </span>
-            <p className="text-gray-900 mt-1">
-              {invoice.country_of_destination || "Various"}
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Products Table */}
       <div className="p-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Product</h3>
+        {/* <h3 className="text-lg font-semibold text-gray-900 mb-4">Product</h3> */}
 
         <div className="overflow-hidden border border-gray-300">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-100 border-b border-gray-300">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+              <tr
+                className={`border-gray-300 ${
+                  activeCompany ? "!text-white" : "text-gray-800"
+                }`}
+                style={{
+                  backgroundColor: activeCompany
+                    ? activeCompany?.company_data?.brand_color
+                    : "#f3f4f6",
+                }}
+              >
+                <th className="inherit text-inherit px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider  border-gray-300">
                   Description (Material)
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-24">
+                <th className="px-4 py-3 text-center text-sm font-semibold  uppercase tracking-wider border-gray-300 w-24">
                   HS Code
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-20">
+                <th className="px-4 py-3 text-center text-sm font-semibold  uppercase tracking-wider  border-gray-300 w-20">
                   Qty
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-24">
+                <th className="px-4 py-3 text-center text-sm font-semibold  uppercase tracking-wider  border-gray-300 w-24">
                   Wt (lbs)
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32">
+                <th className="px-4 py-3 text-center text-sm font-semibold  uppercase tracking-wider  border-gray-300 w-32">
                   Unit value
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-center text-sm font-semibold  uppercase tracking-wider w-32">
                   Amount
                 </th>
               </tr>
@@ -346,7 +306,7 @@ export default function InvoiceDisplay({
                   key={item.id}
                   className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                 >
-                  <td className="px-4 py-3 border-r border-gray-300">
+                  <td className="px-4 py-3 border-gray-300">
                     <div>
                       <p className="font-medium text-gray-900 text-sm">
                         {item.item_name}
@@ -358,16 +318,16 @@ export default function InvoiceDisplay({
                       </p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center border-r border-gray-300 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-center  border-gray-300 text-sm text-gray-900">
                     {item.hs_code || "0"}
                   </td>
-                  <td className="px-4 py-3 text-center border-r border-gray-300 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-center  border-gray-300 text-sm text-gray-900">
                     {item.qty}
                   </td>
-                  <td className="px-4 py-3 text-center border-r border-gray-300 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-center  border-gray-300 text-sm text-gray-900">
                     {item.weight_lbs || "0"}
                   </td>
-                  <td className="px-4 py-3 text-center border-r border-gray-300 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-center  border-gray-300 text-sm text-gray-900">
                     {formatCurrency(item.unit_price)}
                   </td>
                   <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">

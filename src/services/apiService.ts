@@ -97,7 +97,7 @@ class ApiService {
 
   constructor() {
     this.baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.v2.smartinvoice.co.ke/api";
+      process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.v2.smartinvoice.co.ke/api"; 
   }
 
   private getAuthHeaders(): Record<string, string> {

@@ -346,7 +346,7 @@ class CompanyService {
   async getCurrentActiveCompany(): Promise<Company | null> {
     try {
       const response = await this.getActiveCompany();
-      return response.active_company;
+      return response;
     } catch (error) {
       console.error("Error getting active company:", error);
       return null;
