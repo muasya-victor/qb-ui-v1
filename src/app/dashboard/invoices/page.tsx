@@ -71,7 +71,7 @@ const InvoicesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="sm:flex sm:items-center sm:justify-between">
+      {/* <div className="sm:flex sm:items-center sm:justify-between">
         <div className="mt-4 flex sm:mt-0 sm:ml-4">
           {kraConfigStatus.configured && activeCompany && (
             <button
@@ -95,7 +95,7 @@ const InvoicesPage: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Invoice Manager */}
       {activeCompany ? (
