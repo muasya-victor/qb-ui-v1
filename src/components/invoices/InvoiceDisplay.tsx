@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, forwardRef } from "react";
-import {
-  Calendar,
-  Phone,
-  Mail,
-  Globe,
-  FileText,
-} from "lucide-react";
+import { Calendar, Phone, Mail, Globe, FileText } from "lucide-react";
 import QRCode from "react-qr-code";
 import companyService from "../../services/companyService";
 
@@ -365,21 +359,12 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                     {formatCurrency(invoice.subtotal || invoice.total_amt)}
                   </span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
+                <div className="flex justify-between py-2">
                   <span className="text-gray-700">TOTAL TAX:</span>
                   <span className="font-medium text-gray-900">
                     {formatCurrency(invoice?.tax_total || 0)}
                   </span>
                 </div>
-
-                {invoice.tax_total && invoice.tax_total > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-700">Sales tax:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatCurrency(invoice.tax_total)}
-                    </span>
-                  </div>
-                )}
 
                 {invoice.shipping_total && invoice.shipping_total > 0 && (
                   <div className="flex justify-between py-2 border-b border-gray-200">
