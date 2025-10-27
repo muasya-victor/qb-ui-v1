@@ -281,7 +281,6 @@ export default function InvoiceDisplay({
         {/* <h3 className="text-lg font-semibold text-gray-900 mb-4">Product</h3> */}
 
         <div className="overflow-hidden border border-gray-300 text-black">
-          sssx {JSON.stringify(activeCompany?.company_data)}
           <table className="w-full">
             <thead>
               <tr
@@ -290,7 +289,7 @@ export default function InvoiceDisplay({
                 }`}
                 style={{
                   backgroundColor: activeCompany
-                    ? activeCompany?.company_data?.brand_color
+                    ? activeCompany?.brand_color
                     : "#f3f4f6",
                 }}
               >
