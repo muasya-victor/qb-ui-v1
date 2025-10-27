@@ -1,7 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast } from "../../lib/toast";
-import StatsCard from "../ui/StatsCard";
 import companyService, {
   Company,
   UpdateCompanyRequest,
@@ -15,6 +14,8 @@ const CompanyDetails: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<UpdateCompanyRequest>({
     name: "",
     invoice_logo_enabled: true,
@@ -43,6 +44,99 @@ const CompanyDetails: React.FC = () => {
     } else {
       setKraError(null);
     }
+  };
+
+  // Handle logo upload
+  const handleLogoUpload = async (file: File) => {
+    if (!company?.id) {
+      toast.error("No company selected");
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+
+      // Validate file type
+      const validTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please select a valid image file (JPEG, PNG, GIF, WebP)");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+
+      console.log("🔄 Uploading company logo...");
+      const response = await companyService.uploadCompanyLogo(company.id, file);
+
+      if (response.success) {
+        setCompany(response.company);
+        await refreshActiveCompany();
+        toast.success("Company logo updated successfully");
+      } else {
+        throw new Error(response.message || "Failed to upload logo");
+      }
+    } catch (err: any) {
+      console.error("❌ Error uploading logo:", err);
+      toast.error(`Logo upload failed: ${err.message}`);
+    } finally {
+      setUploadingLogo(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // Handle logo removal
+  const handleRemoveLogo = async () => {
+    if (!company?.id) return;
+
+    if (!window.confirm("Are you sure you want to remove the company logo?")) {
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+      console.log("🔄 Removing company logo...");
+      const response = await companyService.removeCompanyLogo(company.id);
+
+      if (response.success) {
+        setCompany(response.company);
+        await refreshActiveCompany();
+        toast.success("Company logo removed successfully");
+      } else {
+        throw new Error("Failed to remove logo");
+      }
+    } catch (err: any) {
+      console.error("❌ Error removing logo:", err);
+      toast.error(`Failed to remove logo: ${err.message}`);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleLogoUpload(file);
+    }
+  };
+
+  // Trigger file input click
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   useEffect(() => {
@@ -128,16 +222,17 @@ const CompanyDetails: React.FC = () => {
         throw new Error("No company selected");
       }
 
-      const response = await companyService.updateCompany(company.id, formData).then((res)=>{
-        setCompany(res.company);
-        refreshActiveCompany();
-        setIsEditing(false);
-        toast.success("Company details updated successfully");
-      })
-      .catch(()=>{
-        throw new Error("Failed to update company details");
-      })
-
+      await companyService
+        .updateCompany(company.id, formData)
+        .then((res) => {
+          setCompany(res.company);
+          refreshActiveCompany();
+          setIsEditing(false);
+          toast.success("Company details updated successfully");
+        })
+        .catch(() => {
+          throw new Error("Failed to update company details");
+        });
     } catch (err: any) {
       toast.error(`Failed to update: ${err.message}`);
       console.error("Error updating company:", err);
@@ -651,7 +746,8 @@ const CompanyDetails: React.FC = () => {
                         </p>
                       )}
                       <p className="text-gray-500 text-xs mt-2">
-                        Must be exactly 11 alphanumeric characters
+                        Format: A000000000B (one letter, nine digits, one
+                        letter)
                       </p>
                     </div>
                   ) : (
@@ -768,8 +864,141 @@ const CompanyDetails: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column - Invoice Branding */}
+        {/* Right Column - Company Logo & Invoice Branding */}
         <div className="space-y-8">
+          {/* Company Logo Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Company Logo
+              </h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Upload your company logo for invoices and branding
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="flex flex-col items-center space-y-4">
+                {/* Logo Preview */}
+                <div className="relative group">
+                  <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                    {company.custom_logo ? (
+                      <img
+                        src={company.custom_logo}
+                        alt="Company Logo"
+                        className="w-full h-full object-contain p-2"
+                      />
+                    ) : (
+                      <svg
+                        className="w-12 h-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    )}
+                  </div>
+
+                  {/* Remove button (only when logo exists) */}
+                  {company.custom_logo && (
+                    <button
+                      onClick={handleRemoveLogo}
+                      disabled={uploadingLogo}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 disabled:opacity-50"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload Controls */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={handleUploadClick}
+                    disabled={uploadingLogo}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploadingLogo ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                          />
+                        </svg>
+                        Upload Logo
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Help Text */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    Recommended: 300×300px, PNG or JPG, max 5MB
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Logo will be used on invoices and company branding
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Invoice Branding Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-100">

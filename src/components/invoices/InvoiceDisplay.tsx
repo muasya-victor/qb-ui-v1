@@ -40,6 +40,7 @@ export interface CompanyInfo {
   qb_legal_name: string;
   currency_code: string;
   logo_url?: string;
+  custom_logo?: string;
   invoice_logo_enabled: boolean;
   brand_color: string;
   invoice_footer_text?: string;
@@ -116,10 +117,19 @@ export default function InvoiceDisplay({
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const response: any = await companyService.getCurrentActiveCompany();
+      console.log("getting active comp");
 
-        setActiveCompany(response[0]);
+      try {
+        // const response = await companyService.clearCache();
+
+        // Then fetch the current active company
+        const activeCompany = await companyService.getCurrentActiveCompany();
+
+        console.log("Active company:", activeCompany);
+
+        // const response: any = await companyService.getCurrentActiveCompany();
+
+        setActiveCompany(activeCompany);
       } catch (error) {
         console.error("Error fetching active company:", error);
       }
@@ -175,13 +185,13 @@ export default function InvoiceDisplay({
     >
       {/* Header Section */}
       <div className=" border-gray-300 p-8">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start text-black">
           {/* Company Logo and Info - Left aligned */}
           <div className="flex-1">
-            {companyInfo.logo_url && companyInfo.invoice_logo_enabled ? (
+            {companyInfo.custom_logo && companyInfo.invoice_logo_enabled ? (
               <div className="mb-4">
                 <img
-                  src={companyInfo.logo_url}
+                  src={companyInfo.custom_logo}
                   alt={`${companyInfo.name} logo`}
                   className="h-16 w-auto object-contain"
                   onError={(e) => {
@@ -191,11 +201,14 @@ export default function InvoiceDisplay({
               </div>
             ) : (
               <div className="mb-4">
-                <div className="h-16 w-16 bg-[url('/next.svg')] bg-center bg-cover"></div>
-                {/* <img src={"/next.svg"} /> */}
+                <div
+                  className="h-24 w-36 bg-center bg-cover rounded"
+                  style={{
+                    backgroundImage: `url(${activeCompany?.custom_logo})`,
+                  }}
+                />
               </div>
             )}
-
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-gray-900">
                 {companyInfo.qb_company_name || companyInfo.name}
@@ -267,7 +280,8 @@ export default function InvoiceDisplay({
       <div className="p-8">
         {/* <h3 className="text-lg font-semibold text-gray-900 mb-4">Product</h3> */}
 
-        <div className="overflow-hidden border border-gray-300">
+        <div className="overflow-hidden border border-gray-300 text-black">
+          sssx {JSON.stringify(activeCompany?.company_data)}
           <table className="w-full">
             <thead>
               <tr

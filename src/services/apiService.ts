@@ -19,6 +19,7 @@ interface Company {
   role?: string;
   is_active?: boolean;
   created_at?: string;
+  custom_logo?: string;
 }
 
 interface RegisterRequest {
@@ -323,6 +324,50 @@ class ApiService {
 
   isAuthenticated(): boolean {
     return this.getAccessToken() !== null;
+  }
+
+  // Add to companyService.ts
+  async uploadCompanyLogo(
+    companyId: string,
+    file: File
+  ): Promise<{ success: boolean; company: Company; message?: string }> {
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    const response = await fetch(
+      `${this.baseUrl}/companies/${companyId}/`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+        credentials: "include",
+        body: formData,
+      }
+    );
+    return this.handleResponse<{
+      success: boolean;
+      company: Company;
+      message?: string;
+    }>(response);
+  }
+
+  async removeCompanyLogo(
+    companyId: string
+  ): Promise<{ success: boolean; company: Company; message?: string }> {
+    const response = await fetch(
+      `${this.baseUrl}/companies/${companyId}/remove-logo/`,
+      {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      }
+    );
+    return this.handleResponse<{
+      success: boolean;
+      company: Company;
+      message?: string;
+    }>(response);
   }
 }
 
