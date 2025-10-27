@@ -94,10 +94,17 @@ interface CallbackResponse {
 class ApiService {
   private baseUrl: string;
   private callbackPromise: Promise<CallbackResponse> | null = null;
+  private onUnauthorizedCallback: (() => void) | null = null;
 
   constructor() {
     this.baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.v2.smartinvoice.co.ke/api"; 
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "https://api.v2.smartinvoice.co.ke/api";
+  }
+
+  // Add this method to set the logout callback
+  public setUnauthorizedCallback(callback: () => void): void {
+    this.onUnauthorizedCallback = callback;
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -140,6 +147,31 @@ class ApiService {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     const responseData = await response.json().catch(() => null);
+
+    // INTERCEPTOR: Handle 401 Unauthorized responses
+    if (response.status === 401) {
+      console.warn("🛡️ 401 Unauthorized detected, triggering logout");
+
+      // Clear local tokens immediately
+      this.clearTokens();
+
+      // Trigger the unauthorized callback if set
+      if (this.onUnauthorizedCallback) {
+        this.onUnauthorizedCallback();
+      } else {
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
+        }
+      }
+
+      const errorMessage =
+        responseData?.error ||
+        responseData?.detail ||
+        responseData?.message ||
+        "Session expired. Please log in again.";
+
+      throw new Error(errorMessage);
+    }
 
     if (!response.ok) {
       const errorMessage =

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { toast } from "../lib/toast";
 import apiService, { User, TokenData } from "../services/apiService";
+import { useRouter } from "next/navigation";
 
 interface AuthContextType {
   user: User | null;
@@ -50,6 +51,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const initAuth = () => {
@@ -71,6 +73,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initAuth();
   }, []);
+
+  useEffect(() => {
+    // Set up the 401 interceptor
+    apiService.setUnauthorizedCallback(() => {
+      console.log("🛡️ Session expired, logging out");
+      router.push("/");
+    });
+  }, [router]);
 
   const login = async (email: string, password: string) => {
     try {
