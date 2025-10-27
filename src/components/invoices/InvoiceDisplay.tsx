@@ -185,11 +185,11 @@ export default function InvoiceDisplay({
     >
       {/* Header Section */}
       <div className=" border-gray-300 p-8">
-        <div className="flex justify-between items-start text-black">
+        <div className="flex justify-between items-stretch text-black flex-1 ">
           {/* Company Logo and Info - Left aligned */}
           <div className="flex-1">
             {companyInfo.custom_logo && companyInfo.invoice_logo_enabled ? (
-              <div className="mb-4">
+              <div className="">
                 <img
                   src={companyInfo.custom_logo}
                   alt={`${companyInfo.name} logo`}
@@ -200,7 +200,7 @@ export default function InvoiceDisplay({
                 />
               </div>
             ) : (
-              <div className="mb-4">
+              <div className="">
                 <div
                   className="h-24 w-36 bg-center bg-cover rounded"
                   style={{
@@ -239,41 +239,68 @@ export default function InvoiceDisplay({
                 )}
               </div>
             </div>
+
+            <div
+              className={`border-gray-300 w-full h-2 mt-2 ${
+                activeCompany ? "!text-white" : "text-gray-800"
+              }`}
+              style={{
+                backgroundColor: activeCompany
+                  ? activeCompany?.brand_color
+                  : "#f3f4f6",
+              }}
+            />
           </div>
 
           {/* Invoice Header - Right aligned */}
-          <div className="text-right ">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              COMMERCIAL INVOICE
+          <div className="text-right flex flex-col items-end justify-between gap-4 !h-[100%] flex-1">
+            <h2
+              className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
+                activeCompany ? "!text-white" : "text-gray-800"
+              }`}
+              style={{
+                backgroundColor: activeCompany
+                  ? activeCompany?.brand_color
+                  : "#f3f4f6",
+              }}
+            >
+              TAX INVOICE {invoice.doc_number || invoice.qb_invoice_id || "N/A"}
             </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="text-gray-600">Invoice #:</span>
-                <span className="ml-2 font-medium text-gray-900">
-                  {invoice.doc_number || invoice.qb_invoice_id || "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center justify-end space-x-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-600">Date:</span>
-                <span className="ml-2 font-medium text-gray-900">
-                  {formatDate(invoice.txn_date)}
-                </span>
-              </div>
-              <div
-                className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
-                  invoice.status
-                )} inline-block mt-2`}
-              >
-                {invoice.status.charAt(0).toUpperCase() +
-                  invoice.status.slice(1)}
-              </div>
+
+            <div
+              className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
+                activeCompany ? "!text-white" : "text-gray-800"
+              }`}
+              style={{
+                backgroundColor: activeCompany
+                  ? activeCompany?.brand_color
+                  : "#f3f4f6",
+              }}
+            >
+              <Calendar className="w-4 h-4 text-white" />
+              <span className="">Date:</span>
+              <span>{formatDate(invoice.due_date)}</span>
+            </div>
+
+            <div
+              className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
+                activeCompany ? "!text-white" : "text-gray-800"
+              }`}
+              style={{
+                backgroundColor: activeCompany
+                  ? activeCompany?.brand_color
+                  : "#f3f4f6",
+              }}
+            >
+              <Calendar className="w-4 h-4 text-white" />
+              <span className="">Due Date:</span>
+              <span>{formatDate(invoice.txn_date)}</span>
             </div>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-300 my-6"></div>
+        {/* <div className="border-t border-gray-300 my-6"></div> */}
       </div>
 
       {/* Products Table */}
@@ -353,16 +380,22 @@ export default function InvoiceDisplay({
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-300 my-6"></div>
+        {/* <div className="border-t border-gray-300 my-6"></div> */}
 
         {/* Totals Section */}
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-4">
           <div className="w-80">
             <div className="space-y-2">
               <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-700">Subtotal:</span>
+                <span className="text-gray-700">SUBTOTAL:</span>
                 <span className="font-medium text-gray-900">
                   {formatCurrency(invoice.subtotal || invoice.total_amt)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-200">
+                <span className="text-gray-700">TOTAL TAX:</span>
+                <span className="font-medium text-gray-900">
+                  {formatCurrency(invoice?.tax_total)}
                 </span>
               </div>
 
@@ -389,6 +422,22 @@ export default function InvoiceDisplay({
                   Total:
                 </span>
                 <span className="text-lg font-bold text-gray-900">
+                  {formatCurrency(invoice.total_amt)}
+                </span>
+              </div>
+
+              <div
+                className={`border-gray-300 flex justify-between py-2 px-4 ${
+                  activeCompany ? "!text-white" : "text-gray-800"
+                }`}
+                style={{
+                  backgroundColor: activeCompany
+                    ? activeCompany?.brand_color
+                    : "#f3f4f6",
+                }}
+              >
+                <span className="text-lg font-semibold">Total Due:</span>
+                <span className="text-lg font-bold">
                   {formatCurrency(invoice.total_amt)}
                 </span>
               </div>
@@ -443,13 +492,13 @@ export default function InvoiceDisplay({
         )}
 
         {/* Footer */}
-        {companyInfo.invoice_footer_text && (
+        {/* {companyInfo.invoice_footer_text && (
           <div className="mt-8 pt-6 border-t border-gray-300 text-center">
             <p className="text-sm text-gray-600">
               {companyInfo.invoice_footer_text}
             </p>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
