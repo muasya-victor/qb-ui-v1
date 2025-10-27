@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { X } from 'lucide-react';
-import InvoiceDisplay, { Invoice, CompanyInfo } from './InvoiceDisplay';
+import React, { useRef, useState } from "react";
+import { X } from "lucide-react";
+import InvoiceDisplay, { Invoice, CompanyInfo } from "./InvoiceDisplay";
 
 interface InvoiceModalProps {
   invoice: Invoice | null;
@@ -19,8 +19,10 @@ export default function InvoiceModal({
   isOpen,
   onClose,
   onDownload,
-  onShare
+  onShare,
 }: InvoiceModalProps) {
+  const invoiceRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen || !invoice || !companyInfo) {
     return null;
   }
@@ -34,10 +36,8 @@ export default function InvoiceModal({
   const handleDownload = () => {
     if (onDownload) {
       onDownload();
-    } else {
-      // Default download behavior - print to PDF
-      window.print();
     }
+    // Let InvoiceDisplay handle the default download behavior
   };
 
   return (
@@ -53,16 +53,10 @@ export default function InvoiceModal({
         <div className="relative w-full max-w-6xl max-h-screen bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            {/* <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Invoice #{invoice.doc_number || invoice.qb_invoice_id || 'NO_INVOICE_NUMBER'}
-              </h2>
-              <p className="text-sm text-gray-600">{companyInfo?.name || 'NO_COMPANY_NAME'}</p>
-            </div> */}
-            <div/>
+            <div />
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors no-print"
             >
               <X className="w-5 h-5" />
             </button>
@@ -80,31 +74,6 @@ export default function InvoiceModal({
           </div>
         </div>
       </div>
-
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-content,
-          .print-content * {
-            visibility: visible;
-          }
-          .print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          /* Hide modal backdrop and controls when printing */
-          .fixed,
-          button,
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
