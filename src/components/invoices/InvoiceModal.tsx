@@ -53,12 +53,13 @@ export default function InvoiceModal({
         <div className="relative w-full max-w-6xl max-h-screen bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <div>
+            {/* <div>
               <h2 className="text-lg font-semibold text-gray-800">
                 Invoice #{invoice.doc_number || invoice.qb_invoice_id || 'NO_INVOICE_NUMBER'}
               </h2>
               <p className="text-sm text-gray-600">{companyInfo?.name || 'NO_COMPANY_NAME'}</p>
-            </div>
+            </div> */}
+            <div/>
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
