@@ -184,60 +184,68 @@ export default function InvoiceDisplay({
       className={`max-w-4xl mx-auto bg-white shadow-lg border border-gray-300 ${className}`}
     >
       {/* Header Section */}
-      <div className=" border-gray-300 p-8">
-        <div className="flex justify-between items-stretch text-black flex-1 ">
+      <div className=" border-gray-300 p-8 flex flex-col gap-4">
+        <div className="flex gap-4">
+          {companyInfo.custom_logo && companyInfo.invoice_logo_enabled ? (
+            <div className="">
+              <img
+                src={companyInfo.custom_logo}
+                alt={`${companyInfo.name} logo`}
+                className="h-16 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+          ) : (
+            <div className="">
+              <div
+                className="h-24 w-36 bg-center bg-cover rounded"
+                style={{
+                  backgroundImage: `url(${activeCompany?.custom_logo})`,
+                }}
+              />
+            </div>
+          )}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {companyInfo.qb_company_name || companyInfo.name}
+            </h1>
+            {companyInfo.formatted_address && (
+              <p className="text-gray-700 text-sm">
+                {companyInfo.formatted_address}
+              </p>
+            )}
+            <div className="space-y-1 text-sm text-gray-600">
+              {companyInfo.contact_info?.phone && (
+                <div className="flex items-center">
+                  <Phone className="w-4 h-4 mr-2" />
+                  <span>{companyInfo.contact_info.phone}</span>
+                </div>
+              )}
+              {companyInfo.contact_info?.email && (
+                <div className="flex items-center">
+                  <Mail className="w-4 h-4 mr-2" />
+                  <span>{companyInfo.contact_info.email}</span>
+                </div>
+              )}
+              {companyInfo.contact_info?.website && (
+                <div className="flex items-center">
+                  <Globe className="w-4 h-4 mr-2" />
+                  <span>{companyInfo.contact_info.website}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-end text-black flex-1 ">
           {/* Company Logo and Info - Left aligned */}
           <div className="flex-1">
-            {companyInfo.custom_logo && companyInfo.invoice_logo_enabled ? (
-              <div className="">
-                <img
-                  src={companyInfo.custom_logo}
-                  alt={`${companyInfo.name} logo`}
-                  className="h-16 w-auto object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="">
-                <div
-                  className="h-24 w-36 bg-center bg-cover rounded"
-                  style={{
-                    backgroundImage: `url(${activeCompany?.custom_logo})`,
-                  }}
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {companyInfo.qb_company_name || companyInfo.name}
-              </h1>
-              {companyInfo.formatted_address && (
-                <p className="text-gray-700 text-sm">
-                  {companyInfo.formatted_address}
-                </p>
-              )}
-              <div className="space-y-1 text-sm text-gray-600">
-                {companyInfo.contact_info?.phone && (
-                  <div className="flex items-center">
-                    <Phone className="w-4 h-4 mr-2" />
-                    <span>{companyInfo.contact_info.phone}</span>
-                  </div>
-                )}
-                {companyInfo.contact_info?.email && (
-                  <div className="flex items-center">
-                    <Mail className="w-4 h-4 mr-2" />
-                    <span>{companyInfo.contact_info.email}</span>
-                  </div>
-                )}
-                {companyInfo.contact_info?.website && (
-                  <div className="flex items-center">
-                    <Globe className="w-4 h-4 mr-2" />
-                    <span>{companyInfo.contact_info.website}</span>
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-col gap-2 mt-2">
+              <h2 className="font-semibold">BILL TO</h2>
+
+              <div>{invoice?.customer_name}</div>
             </div>
 
             <div
@@ -298,9 +306,6 @@ export default function InvoiceDisplay({
             </div>
           </div>
         </div>
-
-        {/* Divider */}
-        {/* <div className="border-t border-gray-300 my-6"></div> */}
       </div>
 
       {/* Products Table */}
