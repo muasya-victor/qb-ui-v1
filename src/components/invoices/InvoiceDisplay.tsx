@@ -444,6 +444,37 @@ export default function InvoiceDisplay({
             </div>
           </div>
         </div>
+        <div className="text-black flex flex-col gap-4 w-full py-4">
+          <h2 className="font-semibold text-2xl text-gray-500">TAX SUMMARY</h2>
+
+          <div className="flex flex-col gap-4">
+            <table className="w-full border-collapse">
+              <thead
+                className={`border-gray-300 text-left ${
+                  activeCompany ? "!text-white" : "text-gray-800"
+                }`}
+                style={{
+                  backgroundColor: activeCompany
+                    ? activeCompany?.brand_color
+                    : "#f3f4f6",
+                }}
+              >
+                <tr>
+                  <th className="py-2 px-4">RATE</th>
+                  <th className="py-2 px-4">TAX</th>
+                  <th className="py-2 px-4">NET</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="py-2 px-4">{invoice?.tax_percent} %</td>
+                  <td className="py-2 px-4">{invoice?.tax_total}</td>
+                  <td className="py-2 px-4">{invoice?.subtotal}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* KRA QR Code Section */}
         {invoice.kra_submission?.qr_code_data && (
