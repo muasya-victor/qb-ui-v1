@@ -1,8 +1,7 @@
-'use client';
-// src/components/ui/StatsCard.jsx
-import React from 'react';
+"use client";
+import React from "react";
 
-const StatsCard = ({ title, value, color = 'gray', icon, trend }) => {
+const StatsCard = ({ title, value, color = "gray", icon, trend }) => {
   const colorClasses = {
     gray: {
       text: "text-gray-900",
@@ -36,10 +35,12 @@ const StatsCard = ({ title, value, color = 'gray', icon, trend }) => {
     },
   };
 
-  const styles = colorClasses[color];
+  const styles = colorClasses[color] || colorClasses.gray;
 
   return (
-    <div className={`${styles.bg} p-6 rounded-xl ${styles.border} border-2 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+    <div
+      className={`${styles.bg} p-6 rounded-xl ${styles.border} border-2 shadow-sm hover:shadow-md transition-shadow duration-200`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <h3 className="text-sm font-medium text-gray-600 mb-1">{title}</h3>
@@ -49,9 +50,7 @@ const StatsCard = ({ title, value, color = 'gray', icon, trend }) => {
           )}
         </div>
         {icon && (
-          <div className={`text-2xl ${styles.icon} opacity-80`}>
-            {icon}
-          </div>
+          <div className={`text-2xl ${styles.icon} opacity-80`}>{icon}</div>
         )}
       </div>
     </div>

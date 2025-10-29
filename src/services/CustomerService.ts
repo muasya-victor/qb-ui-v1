@@ -1,3 +1,4 @@
+"use client";
 import apiService from "./apiService";
 
 interface Customer {
@@ -22,6 +23,7 @@ interface Customer {
   currency_code: string;
   created_at: string;
   updated_at: string;
+  is_stub?: boolean;
 
   // Address fields
   bill_addr_line1?: string;
@@ -57,6 +59,12 @@ interface CustomersResponse {
     name: string;
     realm_id: string;
   };
+  stats?: {
+    total_customers: number;
+    stub_customers: number;
+    active_customers: number;
+    real_customers: number;
+  };
 }
 
 interface CustomerQueryParams {
@@ -71,35 +79,17 @@ interface SyncResponse {
   success: boolean;
   message: string;
   synced_count?: number;
+  failed_count?: number;
+  stub_customers?: number;
   error?: string;
 }
 
-interface CustomerFormData {
-  display_name: string;
-  given_name: string;
-  family_name: string;
-  company_name: string;
-  email: string;
-  phone: string;
-  mobile: string;
-  fax: string;
-  website: string;
-  active: boolean;
-  notes: string;
-  taxable: boolean;
-  tax_code_ref_value: string;
-  bill_addr_line1: string;
-  bill_addr_line2: string;
-  bill_addr_city: string;
-  bill_addr_state: string;
-  bill_addr_postal_code: string;
-  bill_addr_country: string;
-  ship_addr_line1: string;
-  ship_addr_line2: string;
-  ship_addr_city: string;
-  ship_addr_state: string;
-  ship_addr_postal_code: string;
-  ship_addr_country: string;
+interface EnhanceResponse {
+  success: boolean;
+  message: string;
+  enhanced_count?: number;
+  failed_count?: number;
+  error?: string;
 }
 
 class CustomerService {
@@ -195,37 +185,6 @@ class CustomerService {
     }
   }
 
-  async updateCustomer(
-    customerId: string,
-    formData: CustomerFormData
-  ): Promise<{ success: boolean; customer: Customer }> {
-    try {
-      const response = await fetch(`${this.baseURL}/customers/${customerId}/`, {
-        method: "PUT",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error ||
-            errorData.detail ||
-            `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error updating customer:", error);
-      throw error;
-    }
-  }
-
   async syncCustomersFromQuickBooks(): Promise<SyncResponse> {
     try {
       const response = await fetch(`${this.baseURL}/customers/sync/`, {
@@ -253,15 +212,12 @@ class CustomerService {
     }
   }
 
-  async createCustomer(
-    formData: CustomerFormData
-  ): Promise<{ success: boolean; customer: Customer }> {
+  async enhanceStubCustomers(): Promise<EnhanceResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/customers/`, {
+      const response = await fetch(`${this.baseURL}/customers/enhance-stubs/`, {
         method: "POST",
         headers: this.getAuthHeaders(),
         credentials: "include",
-        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -278,18 +234,97 @@ class CustomerService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error("Error creating customer:", error);
+      console.error("Error enhancing stub customers:", error);
+      throw error;
+    }
+  }
+
+  async getCustomerStats(): Promise<{
+    success: boolean;
+    stats?: {
+      customers: {
+        total: number;
+        stub: number;
+        real: number;
+        active: number;
+        inactive: number;
+        quality_score: number;
+      };
+      invoices: {
+        total: number;
+        with_customers: number;
+        with_stub_customers: number;
+        without_customers: number;
+        link_quality_score: number;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseURL}/customers/stats/`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching customer stats:", error);
+      throw error;
+    }
+  }
+
+  async enhanceSingleCustomer(customerId: string): Promise<{
+    success: boolean;
+    message: string;
+    customer?: Customer;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/customers/${customerId}/enhance/`,
+        {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error enhancing customer:", error);
       throw error;
     }
   }
 }
 
-export default new CustomerService();
+// Create and export singleton instance
+const customerService = new CustomerService();
+export default customerService;
+
+// Export types for use in other components
 export type {
   Customer,
   CustomersResponse,
   SyncResponse,
+  EnhanceResponse,
   PaginationInfo,
   CustomerQueryParams,
-  CustomerFormData,
 };

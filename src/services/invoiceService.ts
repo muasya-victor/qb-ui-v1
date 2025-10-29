@@ -480,7 +480,7 @@ class InvoiceService {
 
           // Small delay to avoid overwhelming the API
           await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (error) {
+        } catch (error: any) {
           failedCount++;
           results.push({ invoiceId, success: false, error: error.message });
 
@@ -581,6 +581,197 @@ class InvoiceService {
     } catch (error) {
       console.error("Error fetching KRA receipt details:", error);
       return { success: false, error: error.message };
+    }
+  }
+
+  async smartSyncInvoices(): Promise<{
+    success: boolean;
+    synced_count: number;
+    failed_count: number;
+    stub_customers_created: number;
+    message: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseURL}/invoices/smart-sync/`, {
+        // Updated URL
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error with smart sync:", error);
+      throw error;
+    }
+  }
+
+  async analyzeCustomerLinks(): Promise<{
+    success: boolean;
+    analysis?: {
+      total_invoices: number;
+      invoices_with_customers: number;
+      invoices_without_customers: number;
+      stub_customers: number;
+      invoices_with_stub_customers: number;
+      quality_score: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/invoices/analyze-customer-links/`,
+        {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        // If endpoint doesn't exist (404) or server error (500), calculate locally
+        if (response.status === 404 || response.status === 500) {
+          console.warn(
+            "Analyze customer links endpoint not available, calculating locally"
+          );
+          return this.analyzeCustomerLinksLocally();
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(
+        "Error analyzing customer links, falling back to local calculation:",
+        error
+      );
+      return this.analyzeCustomerLinksLocally();
+    }
+  }
+
+  // Add this method for local calculation as fallback
+  private async analyzeCustomerLinksLocally(): Promise<{
+    success: boolean;
+    analysis: {
+      total_invoices: number;
+      invoices_with_customers: number;
+      invoices_without_customers: number;
+      stub_customers: number;
+      invoices_with_stub_customers: number;
+      quality_score: number;
+    };
+  }> {
+    try {
+      // Get all invoices to analyze locally
+      const response = await this.getInvoices({ fetch_all: true });
+
+      if (!response.success || !response.invoices) {
+        return {
+          success: true,
+          analysis: {
+            total_invoices: 0,
+            invoices_with_customers: 0,
+            invoices_without_customers: 0,
+            stub_customers: 0,
+            invoices_with_stub_customers: 0,
+            quality_score: 0,
+          },
+        };
+      }
+
+      const invoices = response.invoices;
+      const totalInvoices = invoices.length;
+
+      // Calculate customer links locally
+      const invoicesWithCustomers = invoices.filter(
+        (inv) => inv.customer_name && inv.customer_name !== "Unknown Customer"
+      ).length;
+
+      const invoicesWithStubCustomers = invoices.filter(
+        (inv) =>
+          inv.customer_name &&
+          (inv.customer_name.startsWith("Customer ") ||
+            inv.customer_name.includes("Stub") ||
+            !inv.customer_name.trim()) // Empty or null names
+      ).length;
+
+      return {
+        success: true,
+        analysis: {
+          total_invoices: totalInvoices,
+          invoices_with_customers: invoicesWithCustomers,
+          invoices_without_customers: totalInvoices - invoicesWithCustomers,
+          stub_customers: invoicesWithStubCustomers,
+          invoices_with_stub_customers: invoicesWithStubCustomers,
+          quality_score:
+            totalInvoices > 0
+              ? (invoicesWithCustomers / totalInvoices) * 100
+              : 0,
+        },
+      };
+    } catch (error) {
+      console.error("Error in local customer links analysis:", error);
+      return {
+        success: true,
+        analysis: {
+          total_invoices: 0,
+          invoices_with_customers: 0,
+          invoices_without_customers: 0,
+          stub_customers: 0,
+          invoices_with_stub_customers: 0,
+          quality_score: 0,
+        },
+      };
+    }
+  }
+
+  async enhanceStubCustomers(): Promise<{
+    success: boolean;
+    enhanced_count: number;
+    failed_count: number;
+    message: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/invoices/enhance_stub_customers/`,
+        {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error enhancing stub customers:", error);
+      throw error;
     }
   }
 }
