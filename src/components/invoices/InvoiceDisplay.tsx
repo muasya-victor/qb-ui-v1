@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, forwardRef } from "react";
-import { Calendar, Phone, Mail, Globe, FileText } from "lucide-react";
+import { Calendar, Phone, Mail, Globe, FileText, Download } from "lucide-react";
 import QRCode from "react-qr-code";
 import companyService from "../../services/companyService";
+import pdfService from "../../services/pdfService";
 
 export interface InvoiceLineItem {
   id: string;
@@ -87,6 +88,21 @@ interface InvoiceDisplayProps {
 const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
   ({ invoice, companyInfo, onDownload, onShare, className = "" }, ref) => {
     const [activeCompany, setActiveCompany] = useState(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleDownloadPDF = async () => {
+      setIsDownloading(true);
+      try {
+        const result = await pdfService.downloadInvoicePDF(invoice?.id);
+        if (!result.success) {
+          alert(`Failed to download PDF: ${result.error}`);
+        }
+      } catch (error) {
+        alert("Error downloading PDF");
+      } finally {
+        setIsDownloading(false);
+      }
+    };
 
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("en-US", {
@@ -112,6 +128,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
 
       fetchData();
     }, []);
+
+    const handleDownloadInvoice = () => {
+      console.log(invoice);
+    };
 
     const formatDate = (dateString: string) => {
       if (!dateString) return "N/A";
@@ -142,8 +162,23 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
     return (
       <div
         ref={ref}
-        className={`max-w-4xl mx-auto bg-white shadow-lg border border-gray-300 ${className}`}
+        className={`max-w-4xl mx-auto bg-white shadow-lg border border-gray-300 py-4 ${className}`}
       >
+        <button
+          onClick={handleDownloadPDF}
+          disabled={isDownloading}
+          className={`border-gray-300 w-fit h-fit py-2 px-4 rounded flex items-center gap-2 cursor-pointer ${
+            activeCompany ? "!text-white" : "text-gray-800"
+          }`}
+          style={{
+            backgroundColor: activeCompany
+              ? activeCompany?.brand_color
+              : "#f3f4f6",
+          }}
+        >
+          <Download className="h-4 w-4" />
+          {isDownloading ? "Downloading..." : "Download PDF"}
+        </button>
         {/* Header Section */}
         <div className="border-gray-300 p-8 flex flex-col gap-4">
           <div className="flex gap-4">
@@ -268,7 +303,6 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
             </div>
           </div>
         </div>
-
         {/* Products Table */}
         <div className="p-8">
           <div className="overflow-hidden border border-gray-300 text-black">
