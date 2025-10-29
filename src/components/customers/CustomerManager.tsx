@@ -42,6 +42,27 @@ const CustomerManager: React.FC<CustomerManagerProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { activeCompany } = useCompany();
 
+  const handleUpdateCustomer = async (
+    customerId: string,
+    updates: Partial<Customer>
+  ) => {
+    try {
+      const response = await customerService.updateCustomer(
+        customerId,
+        updates
+      );
+      if (response.success) {
+        toast.success("Customer updated successfully");
+        // Refresh the customer list
+        await fetchCustomers(currentPage);
+      } else {
+        toast.error(`Failed to update customer: ${response.error}`);
+      }
+    } catch (error: any) {
+      toast.error(`Failed to update customer: ${error.message}`);
+    }
+  };
+
   const fetchCustomers = useCallback(
     async (page = 1) => {
       try {
@@ -325,6 +346,7 @@ const CustomerManager: React.FC<CustomerManagerProps> = ({
           }}
           onViewCustomer={handleViewCustomer}
           onEditCustomer={handleEditCustomer}
+          onUpdateCustomer={handleUpdateCustomer}
         />
 
         {pagination && pagination.total_pages > 1 && (

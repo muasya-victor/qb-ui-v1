@@ -313,6 +313,76 @@ class CustomerService {
       throw error;
     }
   }
+
+  async updateCustomer(
+    customerId: string,
+    updates: Partial<Customer>
+  ): Promise<{ success: boolean; customer?: Customer; error?: string }> {
+    try {
+      // If only updating KRA PIN, use the dedicated endpoint
+      if (Object.keys(updates).length === 1 && updates.kra_pin !== undefined) {
+        return this.updateCustomerKraPin(customerId, updates.kra_pin);
+      }
+
+      const response = await fetch(`${this.baseURL}/customers/${customerId}/`, {
+        method: "PATCH",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      throw error;
+    }
+  }
+
+  async updateCustomerKraPin(
+    customerId: string,
+    kraPin: string | null
+  ): Promise<{ success: boolean; customer?: Customer; error?: string }> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/customers/${customerId}/update-kra-pin/`,
+        {
+          method: "PATCH",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+          body: JSON.stringify({ kra_pin: kraPin }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error updating KRA PIN:", error);
+      throw error;
+    }
+  }
 }
 
 // Create and export singleton instance
