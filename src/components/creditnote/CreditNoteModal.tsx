@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { X } from "lucide-react";
 import CreditNoteDisplay, {
   CreditNote,
@@ -24,6 +24,8 @@ export default function CreditNoteModal({
   onDownload,
   onShare,
 }: CreditNoteModalProps) {
+  const creditNoteRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen || !creditNote || !companyInfo) {
     return null;
   }
@@ -37,10 +39,8 @@ export default function CreditNoteModal({
   const handleDownload = () => {
     if (onDownload) {
       onDownload();
-    } else {
-      // Default download behavior - print to PDF
-      window.print();
     }
+    // Let CreditNoteDisplay handle the default download behavior
   };
 
   return (
@@ -56,20 +56,10 @@ export default function CreditNoteModal({
         <div className="relative w-full max-w-6xl max-h-screen bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Credit Note #
-                {creditNote.doc_number ||
-                  creditNote.qb_credit_note_id ||
-                  "NO_CREDIT_NOTE_NUMBER"}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {companyInfo?.name || "NO_COMPANY_NAME"}
-              </p>
-            </div>
+            <div />
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors no-print"
             >
               <X className="w-5 h-5" />
             </button>
@@ -78,6 +68,7 @@ export default function CreditNoteModal({
           {/* Content */}
           <div className="overflow-y-auto max-h-[calc(100vh-8rem)]">
             <CreditNoteDisplay
+              ref={creditNoteRef}
               creditNote={creditNote}
               companyInfo={companyInfo}
               onDownload={handleDownload}
@@ -87,31 +78,6 @@ export default function CreditNoteModal({
           </div>
         </div>
       </div>
-
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-content,
-          .print-content * {
-            visibility: visible;
-          }
-          .print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          /* Hide modal backdrop and controls when printing */
-          .fixed,
-          button,
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -195,6 +195,168 @@ class PDFService {
       return null;
     }
   }
+
+  /**
+   * Download credit note as PDF
+   * @param creditNoteId - The ID of the credit note to download
+   * @returns Promise with success status and blob data
+   */
+  async downloadCreditNotePDF(
+    creditNoteId: string
+  ): Promise<PDFDownloadResponse> {
+    try {
+      console.log(`Downloading PDF for credit note: ${creditNoteId}`);
+
+      const response = await fetch(
+        `${this.baseURL}/credit-notes/pdf/${creditNoteId}/download/`,
+        {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      // Check if response is PDF
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/pdf")) {
+        throw new Error("Response is not a PDF file");
+      }
+
+      const blob = await response.blob();
+
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = `credit-note-${creditNoteId}.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(
+        `PDF downloaded successfully for credit note: ${creditNoteId}`
+      );
+
+      return {
+        success: true,
+        blob,
+      };
+    } catch (error) {
+      console.error("Error downloading credit note PDF:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  }
+
+  /**
+   * Get credit note PDF as blob without automatic download
+   * Useful for preview or custom download handling
+   */
+  async getCreditNotePDFBlob(
+    creditNoteId: string
+  ): Promise<PDFDownloadResponse> {
+    try {
+      console.log(`Fetching PDF blob for credit note: ${creditNoteId}`);
+
+      const response = await fetch(
+        `${this.baseURL}/credit-notes/${creditNoteId}/pdf/`,
+        {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+
+      return {
+        success: true,
+        blob,
+      };
+    } catch (error) {
+      console.error("Error fetching credit note PDF blob:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  }
+
+  /**
+   * Open credit note PDF in new tab instead of downloading
+   */
+  async openCreditNotePDF(creditNoteId: string): Promise<PDFDownloadResponse> {
+    try {
+      const result = await this.getCreditNotePDFBlob(creditNoteId);
+
+      if (result.success && result.blob) {
+        const url = window.URL.createObjectURL(result.blob);
+        window.open(url, "_blank");
+
+        // Clean up the URL after some time
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+
+        return result;
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error opening credit note PDF:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  }
+
+  /**
+   * Preview credit note PDF in an iframe or embed element
+   */
+  async getCreditNotePDFUrl(creditNoteId: string): Promise<string | null> {
+    try {
+      const result = await this.getCreditNotePDFBlob(creditNoteId);
+
+      if (result.success && result.blob) {
+        return window.URL.createObjectURL(result.blob);
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error getting credit note PDF URL:", error);
+      return null;
+    }
+  }
 }
 
 // Create and export singleton instance
