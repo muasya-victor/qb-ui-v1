@@ -14,6 +14,9 @@ export interface CreditNoteLineItem {
   qty: number;
   unit_price: number;
   amount: number;
+  tax_code_ref?: string;
+  tax_amount?: number;
+  tax_rate?: number;
   hs_code?: string;
   weight_lbs?: number;
   material_description?: string;
@@ -58,6 +61,7 @@ export interface CreditNote {
   balance: number;
   subtotal?: number;
   tax_total?: number;
+  tax_percent?: number;
   shipping_total?: number;
   private_note?: string;
   customer_memo?: string;
@@ -151,32 +155,6 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
       }
     };
 
-    const getStatusColor = (status: string) => {
-      switch (status) {
-        case "applied":
-          return "bg-green-100 text-green-800 border-green-200";
-        case "pending":
-          return "bg-blue-100 text-blue-800 border-blue-200";
-        case "void":
-          return "bg-gray-100 text-gray-800 border-gray-200";
-        default:
-          return "bg-gray-100 text-gray-800 border-gray-200";
-      }
-    };
-
-    const getStatusText = (status: string) => {
-      switch (status) {
-        case "applied":
-          return "Applied";
-        case "pending":
-          return "Pending";
-        case "void":
-          return "Void";
-        default:
-          return status;
-      }
-    };
-
     return (
       <div
         ref={ref}
@@ -255,7 +233,7 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
           </div>
 
           <div className="flex justify-between items-end text-black flex-1">
-            {/* Company Info - Left aligned */}
+            {/* Company Logo and Info - Left aligned */}
             <div className="flex-1">
               <div className="flex flex-col gap-2 mt-2">
                 <h2 className="font-semibold">BILL TO</h2>
@@ -321,89 +299,12 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                   <span>{creditNote.related_invoice_ref}</span>
                 </div>
               )}
-
-              <div
-                className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
-                  creditNote.status
-                )}`}
-              >
-                {getStatusText(creditNote.status)}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Exporter and Consignee Section */}
-        <div className="px-8 mb-6">
-          <div className="grid grid-cols-2 gap-8">
-            {/* Exporter */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                Exporter
-              </h3>
-              <div className="bg-gray-50 p-4 border border-gray-200 rounded">
-                <p className="text-gray-900 font-medium">
-                  {creditNote.customer_name}
-                </p>
-                {creditNote.exporter_info && (
-                  <p className="text-gray-600 text-sm mt-1">
-                    {creditNote.exporter_info}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Consignee */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                Consignee
-              </h3>
-              <div className="bg-gray-50 p-4 border border-gray-200 rounded">
-                <p className="text-gray-900 font-medium">
-                  {creditNote.customer_name}
-                </p>
-                {creditNote.consignee_info && (
-                  <p className="text-gray-600 text-sm mt-1">
-                    {creditNote.consignee_info}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Export Information */}
-          <div className="grid grid-cols-3 gap-6 mt-6">
-            <div>
-              <span className="text-sm font-semibold text-gray-700">
-                Country of export:
-              </span>
-              <p className="text-gray-900 mt-1">
-                {creditNote.country_of_export || "United States"}
-              </p>
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-gray-700">
-                Reason for export:
-              </span>
-              <p className="text-gray-900 mt-1">
-                {creditNote.reason_for_export || "Return/Adjustment"}
-              </p>
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-gray-700">
-                Country of destination:
-              </span>
-              <p className="text-gray-900 mt-1">
-                {creditNote.country_of_destination || "Various"}
-              </p>
             </div>
           </div>
         </div>
 
         {/* Products Table */}
         <div className="p-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Product</h3>
-
           <div className="overflow-hidden border border-gray-300 text-black">
             <table className="w-full">
               <thead>
@@ -418,19 +319,19 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                   }}
                 >
                   <th className="inherit text-inherit px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider border-gray-300">
-                    Description (Material)
+                    #Item No
                   </th>
-                  <th className="inherit text-inherit px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider border-gray-300 w-24">
-                    HS Code
+                  <th className="inherit text-inherit px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider border-gray-300">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider border-gray-300 w-24">
+                    Tax
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider border-gray-300 w-20">
                     Qty
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider border-gray-300 w-24">
-                    Wt (lbs)
-                  </th>
                   <th className="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider border-gray-300 w-32">
-                    Unit value
+                    Unit Price
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider w-32">
                     Amount
@@ -446,6 +347,13 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                     <td className="px-4 py-3 border-gray-300">
                       <div>
                         <p className="font-medium text-gray-900 text-sm">
+                          {index + 1}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-gray-300">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
                           {item.item_name}
                         </p>
                         <p className="text-gray-600 text-xs mt-1">
@@ -456,13 +364,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
-                      {item.hs_code || "0"}
+                      {item.tax_amount || "0"}
                     </td>
                     <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
                       {item.qty}
-                    </td>
-                    <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
-                      {item.weight_lbs || "0"}
                     </td>
                     <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
                       {formatCurrency(item.unit_price)}
@@ -476,9 +381,6 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
             </table>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-gray-300 my-6"></div>
-
           {/* Totals Section */}
           <div className="flex justify-end pt-4">
             <div className="w-80">
@@ -491,15 +393,12 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                     )}
                   </span>
                 </div>
-
-                {creditNote.tax_total && creditNote.tax_total > 0 && (
-                  <div className="flex justify-between py-2">
-                    <span className="text-gray-700">TOTAL TAX:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatCurrency(creditNote.tax_total)}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-700">TOTAL TAX:</span>
+                  <span className="font-medium text-gray-900">
+                    {formatCurrency(creditNote?.tax_total || 0)}
+                  </span>
+                </div>
 
                 {creditNote.shipping_total && creditNote.shipping_total > 0 && (
                   <div className="flex justify-between py-2 border-b border-gray-200">
@@ -542,6 +441,47 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
             </div>
           </div>
 
+          {/* Tax Summary Section - Exactly like Invoice */}
+          <div className="text-black flex flex-col gap-4 w-full py-4">
+            <h2 className="font-semibold text-2xl text-gray-500">
+              TAX SUMMARY
+            </h2>
+
+            <div className="flex flex-col gap-4">
+              <table className="w-full border-collapse">
+                <thead
+                  className={`border-gray-300 text-left ${
+                    activeCompany ? "!text-white" : "text-gray-800"
+                  }`}
+                  style={{
+                    backgroundColor: activeCompany
+                      ? activeCompany?.brand_color
+                      : "#f3f4f6",
+                  }}
+                >
+                  <tr>
+                    <th className="py-2 px-4">RATE</th>
+                    <th className="py-2 px-4">TAX</th>
+                    <th className="py-2 px-4">NET</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="py-2 px-4">
+                      {creditNote?.tax_percent || 0} %
+                    </td>
+                    <td className="py-2 px-4">
+                      {formatCurrency(creditNote?.tax_total || 0)}
+                    </td>
+                    <td className="py-2 px-4">
+                      {formatCurrency(creditNote?.subtotal || 0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* KRA QR Code Section */}
           {creditNote.kra_submission?.qr_code_data && (
             <div className="mt-8 pt-6">
@@ -562,7 +502,7 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
 
           {/* Notes Section */}
           {(creditNote.customer_memo || creditNote.private_note) && (
-            <div className="mt-8 pt-6 border-t border-gray-300">
+            <div className="mt-8 pt-6 border-t border-gray-300 hidden">
               <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                 <FileText className="w-5 h-5 mr-2 text-gray-600" />
                 Notes
@@ -585,15 +525,6 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          {companyInfo.credit_note_footer_text && (
-            <div className="mt-8 pt-6 border-t border-gray-300 text-center">
-              <p className="text-sm text-gray-600">
-                {companyInfo.credit_note_footer_text}
-              </p>
             </div>
           )}
         </div>
