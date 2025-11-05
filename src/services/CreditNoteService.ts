@@ -1,13 +1,114 @@
 "use client";
 import apiService from "./apiService";
 
+interface CreditNote {
+  id: string;
+  doc_number: string;
+  total_amt: number;
+  balance: number;
+  txn_date: string;
+  customer_name: string;
+  status: string;
+  currency_code?: string;
+  qb_credit_id?: string;
+  subtotal?: number;
+  tax_total?: number;
+  tax_percent?: number;
+  customer_ref_value?: string;
+  private_note?: string;
+  customer_memo?: string;
+  is_kra_validated?: boolean;
+  kra_submissions?: any[];
+  line_items?: any[];
+}
+
+interface PaginationInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  page_size: number;
+  current_page: number;
+  total_pages: number;
+}
+
+interface CreditNotesResponse {
+  success: boolean;
+  credit_notes: CreditNote[];
+  pagination?: PaginationInfo;
+  company_info?: {
+    currency_code: string;
+    name: string;
+    realm_id: string;
+    id?: string;
+  };
+  stats?: {
+    total_credit_notes: number;
+    applied_credit_notes: number;
+    pending_credit_notes: number;
+    void_credit_notes: number;
+    total_amount: number;
+    outstanding_balance: number;
+    kra_validated_credit_notes: number;
+    validation_rate: number;
+  };
+  kra_stats?: {
+    total_submissions: number;
+    successful_submissions: number;
+    failed_submissions: number;
+    pending_submissions: number;
+  };
+}
+
+interface CreditNoteQueryParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: string;
+  kra_validated?: boolean;
+}
+
+interface SyncResponse {
+  success: boolean;
+  message: string;
+  synced_count?: number;
+  failed_count?: number;
+  stub_customers_created?: number;
+  error?: string;
+}
+
+interface KRAValidationResponse {
+  success: boolean;
+  message: string;
+  submission_id?: string;
+  kra_invoice_number?: number;
+  receipt_signature?: string;
+  qr_code_data?: string;
+  kra_response?: any;
+  error?: string;
+}
+
+interface CustomerAnalysisResponse {
+  success: boolean;
+  analysis?: {
+    total_credit_notes: number;
+    credit_notes_with_customers: number;
+    credit_notes_without_customers: number;
+    stub_customers: number;
+    credit_notes_with_stub_customers: number;
+    quality_score: number;
+  };
+  error?: string;
+}
+
 class CreditNoteService {
+  private baseURL: string;
+
   constructor() {
     this.baseURL =
       process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
   }
 
-  getAuthHeaders() {
+  private getAuthHeaders() {
     const token = apiService.isAuthenticated() ? this.getAuthToken() : null;
     return {
       "Content-Type": "application/json",
@@ -15,7 +116,7 @@ class CreditNoteService {
     };
   }
 
-  getAuthToken() {
+  private getAuthToken(): string | null {
     if (typeof window === "undefined") return null;
 
     const authData = localStorage.getItem("auth_tokens");
@@ -31,7 +132,7 @@ class CreditNoteService {
     return null;
   }
 
-  buildQueryString(params = {}) {
+  private buildQueryString(params: CreditNoteQueryParams): string {
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -43,7 +144,9 @@ class CreditNoteService {
     return searchParams.toString();
   }
 
-  async getCreditNotes(params = {}) {
+  async getCreditNotes(
+    params: CreditNoteQueryParams = {}
+  ): Promise<CreditNotesResponse> {
     try {
       const queryString = this.buildQueryString(params);
       const url = `${this.baseURL}/credit-notes/${
@@ -68,14 +171,16 @@ class CreditNoteService {
     }
   }
 
-  async getAllCreditNotes(progressCallback) {
+  async getAllCreditNotes(
+    progressCallback?: (message: string) => void
+  ): Promise<CreditNotesResponse> {
     try {
-      let allCreditNotes = [];
+      let allCreditNotes: CreditNote[] = [];
       let currentPage = 1;
       let totalPages = 1;
-      let companyInfo = null;
+      let companyInfo: any = null;
 
-      const updateProgress = (message) => {
+      const updateProgress = (message: string) => {
         console.log(message);
         if (progressCallback) {
           progressCallback(message);
@@ -144,7 +249,9 @@ class CreditNoteService {
     }
   }
 
-  async getCreditNote(creditNoteId) {
+  async getCreditNote(
+    creditNoteId: string
+  ): Promise<{ success: boolean; credit_note: CreditNote }> {
     try {
       const response = await fetch(
         `${this.baseURL}/credit-notes/${creditNoteId}/`,
@@ -167,7 +274,7 @@ class CreditNoteService {
     }
   }
 
-  async syncCreditNotesFromQuickBooks() {
+  async syncCreditNotesFromQuickBooks(): Promise<SyncResponse> {
     try {
       const response = await fetch(
         `${this.baseURL}/credit-notes/sync_from_quickbooks/`,
@@ -197,12 +304,196 @@ class CreditNoteService {
     }
   }
 
+  // ✅ NEW: Smart Sync for Credit Notes
+  async smartSyncCreditNotes(): Promise<{
+    success: boolean;
+    synced_count: number;
+    failed_count: number;
+    stub_customers_created: number;
+    message: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseURL}/credit-notes/smart-sync/`, {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error with smart sync:", error);
+      throw error;
+    }
+  }
+
+  // ✅ NEW: Analyze Customer Links for Credit Notes
+  async analyzeCustomerLinks(): Promise<CustomerAnalysisResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/credit-notes/analyze-customer-links/`,
+        {
+          method: "GET",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        // If endpoint doesn't exist (404) or server error (500), calculate locally
+        if (response.status === 404 || response.status === 500) {
+          console.warn(
+            "Analyze customer links endpoint not available, calculating locally"
+          );
+          return this.analyzeCustomerLinksLocally();
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(
+        "Error analyzing customer links, falling back to local calculation:",
+        error
+      );
+      return this.analyzeCustomerLinksLocally();
+    }
+  }
+
+  // ✅ NEW: Enhance Stub Customers for Credit Notes
+  async enhanceStubCustomers(): Promise<{
+    success: boolean;
+    enhanced_count: number;
+    failed_count: number;
+    message: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/credit-notes/enhance-stub-customers/`,
+        {
+          method: "POST",
+          headers: this.getAuthHeaders(),
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error enhancing stub customers:", error);
+      throw error;
+    }
+  }
+
+  // Add this method for local calculation as fallback
+  private async analyzeCustomerLinksLocally(): Promise<{
+    success: boolean;
+    analysis: {
+      total_credit_notes: number;
+      credit_notes_with_customers: number;
+      credit_notes_without_customers: number;
+      stub_customers: number;
+      credit_notes_with_stub_customers: number;
+      quality_score: number;
+    };
+  }> {
+    try {
+      // Get all credit notes to analyze locally
+      const response = await this.getCreditNotes({ page_size: 1000 });
+
+      if (!response.success || !response.credit_notes) {
+        return {
+          success: true,
+          analysis: {
+            total_credit_notes: 0,
+            credit_notes_with_customers: 0,
+            credit_notes_without_customers: 0,
+            stub_customers: 0,
+            credit_notes_with_stub_customers: 0,
+            quality_score: 0,
+          },
+        };
+      }
+
+      const creditNotes = response.credit_notes;
+      const totalCreditNotes = creditNotes.length;
+
+      // Calculate customer links locally
+      const creditNotesWithCustomers = creditNotes.filter(
+        (cn) => cn.customer_name && cn.customer_name !== "Unknown Customer"
+      ).length;
+
+      const creditNotesWithStubCustomers = creditNotes.filter(
+        (cn) =>
+          cn.customer_name &&
+          (cn.customer_name.startsWith("Customer ") ||
+            cn.customer_name.includes("Stub") ||
+            !cn.customer_name.trim()) // Empty or null names
+      ).length;
+
+      return {
+        success: true,
+        analysis: {
+          total_credit_notes: totalCreditNotes,
+          credit_notes_with_customers: creditNotesWithCustomers,
+          credit_notes_without_customers:
+            totalCreditNotes - creditNotesWithCustomers,
+          stub_customers: creditNotesWithStubCustomers,
+          credit_notes_with_stub_customers: creditNotesWithStubCustomers,
+          quality_score:
+            totalCreditNotes > 0
+              ? (creditNotesWithCustomers / totalCreditNotes) * 100
+              : 0,
+        },
+      };
+    } catch (error) {
+      console.error("Error in local customer links analysis:", error);
+      return {
+        success: true,
+        analysis: {
+          total_credit_notes: 0,
+          credit_notes_with_customers: 0,
+          credit_notes_without_customers: 0,
+          stub_customers: 0,
+          credit_notes_with_stub_customers: 0,
+          quality_score: 0,
+        },
+      };
+    }
+  }
+
   // KRA Validation Methods for Credit Notes
-  async validateCreditNoteToKRA(creditNoteId) {
+  async validateCreditNoteToKRA(
+    creditNoteId: string
+  ): Promise<KRAValidationResponse> {
     try {
       console.log(`Validating credit note ${creditNoteId} with KRA...`);
 
-      // FIX: Changed from submit-to-kra to submit_to_kra
       const response = await fetch(
         `${this.baseURL}/credit-notes/${creditNoteId}/submit_to_kra/`,
         {
@@ -238,18 +529,13 @@ class CreditNoteService {
     }
   }
 
-  async getKRASubmissionStatus(submissionId) {
+  async getCreditNoteStats() {
     try {
-      console.log(`Fetching KRA submission status for: ${submissionId}`);
-
-      const response = await fetch(
-        `${this.baseURL}/kra/credit-note-submissions/${submissionId}/status/`,
-        {
-          method: "GET",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${this.baseURL}/credit-notes/stats/`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -258,12 +544,23 @@ class CreditNoteService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error("Error fetching KRA submission status:", error);
+      console.error("Error fetching credit note stats:", error);
       throw error;
     }
   }
 
-  async bulkValidateCreditNotesToKRA(creditNoteIds, progressCallback) {
+  async bulkValidateCreditNotesToKRA(
+    creditNoteIds: string[],
+    progressCallback?: (
+      progress: number,
+      current: string,
+      success: boolean
+    ) => void
+  ): Promise<{
+    success: number;
+    failed: number;
+    results: Array<{ creditNoteId: string; success: boolean; error?: string }>;
+  }> {
     try {
       console.log(
         `Starting bulk KRA validation for ${creditNoteIds.length} credit notes...`
@@ -292,7 +589,7 @@ class CreditNoteService {
             results.push({
               creditNoteId,
               success: true,
-              kraCreditNoteNumber: result.kra_credit_note_number,
+              kraInvoiceNumber: result.kra_invoice_number,
             });
           } else {
             failedCount++;
@@ -309,7 +606,7 @@ class CreditNoteService {
 
           // Small delay to avoid overwhelming the API
           await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (error) {
+        } catch (error: any) {
           failedCount++;
           results.push({ creditNoteId, success: false, error: error.message });
 
@@ -337,28 +634,19 @@ class CreditNoteService {
       throw error;
     }
   }
-
-  async getCreditNoteStats() {
-    try {
-      const response = await fetch(`${this.baseURL}/credit-notes/stats/`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching credit note stats:", error);
-      throw error;
-    }
-  }
 }
 
 // Create and export singleton instance
 const creditNoteService = new CreditNoteService();
 export default creditNoteService;
+
+// Export types for use in other components
+export type {
+  CreditNote,
+  CreditNotesResponse,
+  SyncResponse,
+  PaginationInfo,
+  CreditNoteQueryParams,
+  KRAValidationResponse,
+  CustomerAnalysisResponse,
+};
