@@ -118,6 +118,28 @@ const ValidationModal = ({
   const renderResultStep = () => {
     const isSuccess = validationResult?.success;
 
+    // Handle both invoice and credit note response formats
+    const getKraDocumentNumber = () => {
+      if (validationResult?.kra_document_number) {
+        return validationResult.kra_document_number;
+      }
+      if (validationResult?.kra_invoice_number) {
+        return validationResult.kra_invoice_number;
+      }
+      if (validationResult?.kra_credit_note_number) {
+        return validationResult.kra_credit_note_number;
+      }
+      return "N/A";
+    };
+
+    const getReceiptSignature = () => {
+      return validationResult?.receipt_signature || "N/A";
+    };
+
+    const getQrCodeData = () => {
+      return validationResult?.qr_code_data;
+    };
+
     return (
       <div className="space-y-4">
         <div
@@ -155,8 +177,7 @@ const ValidationModal = ({
                   KRA {documentType} #:
                 </span>
                 <div className="text-green-600 font-semibold">
-                  {validationResult.kra_document_number ||
-                    validationResult.kra_invoice_number}
+                  {getKraDocumentNumber()}
                 </div>
               </div>
               <div>
@@ -164,12 +185,12 @@ const ValidationModal = ({
                   Receipt Signature:
                 </span>
                 <div className="font-mono text-xs text-green-600">
-                  {validationResult.receipt_signature}
+                  {getReceiptSignature()}
                 </div>
               </div>
             </div>
 
-            {validationResult.qr_code_data && (
+            {getQrCodeData() && (
               <div className="text-center">
                 <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
                   <QrCodeIcon className="w-3 h-3 mr-1" />
