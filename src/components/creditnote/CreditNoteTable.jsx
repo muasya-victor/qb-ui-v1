@@ -41,6 +41,7 @@ const CreditNoteTable = ({
   ];
 
   const handleValidateClick = (creditNote) => {
+    console.log("Selected Credit Note:", creditNote); // Debug
     setSelectedCreditNote(creditNote);
     setValidationModalOpen(true);
   };
@@ -409,11 +410,11 @@ const CreditNoteTable = ({
         )}
       </div>
 
-      {/* Validation Modal */}
+      {/* Validation Modal - FIXED: Use creditNote prop instead of invoice */}
       <ValidationModal
         isOpen={validationModalOpen}
         onClose={() => setValidationModalOpen(false)}
-        invoice={selectedCreditNote}
+        creditNote={selectedCreditNote} // Changed from invoice to creditNote
         onValidate={handleValidation}
         onValidationSuccess={handleValidationSuccess}
         type="credit_note"

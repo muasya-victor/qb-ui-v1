@@ -21,8 +21,20 @@ const ValidationModal = ({
   const [validationResult, setValidationResult] = useState(null);
   const [step, setStep] = useState("confirm"); // 'confirm', 'validating', 'result'
 
+  // Safe document selection with fallback
   const document = type === "credit_note" ? creditNote : invoice;
   const documentType = type === "credit_note" ? "Credit Note" : "Invoice";
+
+  // Safe document number access
+  const getDocumentNumber = () => {
+    if (!document) return "Unknown";
+    return (
+      document.doc_number ||
+      document.qb_invoice_id ||
+      document.qb_credit_id ||
+      "Unknown"
+    );
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -33,11 +45,23 @@ const ValidationModal = ({
   }, [isOpen]);
 
   const handleValidate = async () => {
+    // Safety check - ensure document exists
+    if (!document) {
+      console.error("Cannot validate: document is undefined");
+      setValidationResult({
+        success: false,
+        error: "Document not found. Please try again.",
+      });
+      setStep("result");
+      return;
+    }
+
     setIsValidating(true);
     setStep("validating");
 
     try {
       const result = await onValidate(document.id);
+      console.log(`${documentType} Validation Result:`, result);
       setValidationResult(result);
       setStep("result");
 
@@ -45,6 +69,7 @@ const ValidationModal = ({
         onValidationSuccess();
       }
     } catch (error) {
+      console.error(`${documentType} Validation Error:`, error);
       setValidationResult({
         success: false,
         error: error.message || "Validation failed",
@@ -64,6 +89,39 @@ const ValidationModal = ({
     }, 300);
   };
 
+  // Early return if document is undefined when modal is open
+  if (isOpen && !document) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-end justify-center min-h-full p-4 text-center sm:items-center sm:p-0">
+          <div
+            className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+            onClick={handleClose}
+          />
+
+          <div className="relative px-4 pt-5 pb-4 overflow-hidden text-left transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+                <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-red-900">Error</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Document not found. Please try selecting the document again.
+              </p>
+              <button
+                type="button"
+                className="inline-flex justify-center w-full px-4 py-2 mt-4 text-base font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:w-auto sm:text-sm"
+                onClick={handleClose}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const renderConfirmStep = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-center w-12 h-12 mx-auto bg-blue-100 rounded-full">
@@ -75,7 +133,7 @@ const ValidationModal = ({
         </h3>
         <p className="mt-2 text-sm text-gray-500">
           This will submit {documentType.toLowerCase()}{" "}
-          <strong>{document.doc_number}</strong> to the Kenya Revenue Authority
+          <strong>{getDocumentNumber()}</strong> to the Kenya Revenue Authority
           for fiscal validation. A digital receipt with QR code will be
           generated.
         </p>
