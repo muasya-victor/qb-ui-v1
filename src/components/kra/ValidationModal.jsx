@@ -1,3 +1,4 @@
+// components/kra/ValidationModal.jsx
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -7,10 +8,21 @@ import {
   QrCodeIcon,
 } from "@heroicons/react/24/outline";
 
-const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
+const ValidationModal = ({
+  isOpen,
+  onClose,
+  invoice,
+  creditNote,
+  onValidate,
+  onValidationSuccess,
+  type = "invoice", // 'invoice' or 'credit_note'
+}) => {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [step, setStep] = useState("confirm"); // 'confirm', 'validating', 'result'
+
+  const document = type === "credit_note" ? creditNote : invoice;
+  const documentType = type === "credit_note" ? "Credit Note" : "Invoice";
 
   useEffect(() => {
     if (isOpen) {
@@ -25,9 +37,13 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
     setStep("validating");
 
     try {
-      const result = await onValidate(invoice.id);
+      const result = await onValidate(document.id);
       setValidationResult(result);
       setStep("result");
+
+      if (result.success && onValidationSuccess) {
+        onValidationSuccess();
+      }
     } catch (error) {
       setValidationResult({
         success: false,
@@ -58,9 +74,10 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
           Validate with KRA
         </h3>
         <p className="mt-2 text-sm text-gray-500">
-          This will submit invoice <strong>{invoice.doc_number}</strong> to the
-          Kenya Revenue Authority for fiscal validation. A digital receipt with
-          QR code will be generated.
+          This will submit {documentType.toLowerCase()}{" "}
+          <strong>{document.doc_number}</strong> to the Kenya Revenue Authority
+          for fiscal validation. A digital receipt with QR code will be
+          generated.
         </p>
       </div>
       <div className="p-4 bg-yellow-50 rounded-lg">
@@ -70,7 +87,10 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
             <h4 className="text-sm font-medium text-yellow-800">Important</h4>
             <div className="mt-1 text-sm text-yellow-700">
               <p>• This action cannot be undone</p>
-              <p>• Invoice number will be sequential as per KRA requirements</p>
+              <p>
+                • {documentType} number will be sequential as per KRA
+                requirements
+              </p>
               <p>• Digital receipt will be stored in the system</p>
             </div>
           </div>
@@ -89,7 +109,7 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
           Validating with KRA
         </h3>
         <p className="mt-2 text-sm text-gray-500">
-          Submitting invoice to Kenya Revenue Authority...
+          Submitting {documentType.toLowerCase()} to Kenya Revenue Authority...
         </p>
       </div>
     </div>
@@ -121,7 +141,7 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
           </h3>
           <p className="mt-2 text-sm text-gray-500">
             {isSuccess
-              ? "Invoice has been successfully validated with KRA and a digital receipt has been generated."
+              ? `${documentType} has been successfully validated with KRA and a digital receipt has been generated.`
               : validationResult?.error ||
                 "An error occurred during validation."}
           </p>
@@ -132,10 +152,11 @@ const ValidationModal = ({ isOpen, onClose, invoice, onValidate }) => {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-700">
-                  KRA Invoice #:
+                  KRA {documentType} #:
                 </span>
                 <div className="text-green-600 font-semibold">
-                  {validationResult.kra_invoice_number}
+                  {validationResult.kra_document_number ||
+                    validationResult.kra_invoice_number}
                 </div>
               </div>
               <div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, forwardRef } from "react";
 import { Calendar, Phone, Mail, Globe, FileText, Download } from "lucide-react";
+import QRCode from "react-qr-code";
 import companyService from "../../services/companyService";
 import pdfService from "../../services/pdfService";
 
@@ -36,6 +37,17 @@ export interface CompanyInfo {
   };
 }
 
+export interface KRASubmission {
+  id: string;
+  kra_credit_note_number: number;
+  trd_credit_note_no: string;
+  status: string;
+  qr_code_data?: string;
+  receipt_signature?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreditNote {
   id: string;
   qb_credit_id: string;
@@ -58,6 +70,7 @@ export interface CreditNote {
   country_of_export?: string;
   reason_for_export?: string;
   country_of_destination?: string;
+  kra_submission?: KRASubmission;
 }
 
 interface CreditNoteDisplayProps {
@@ -125,6 +138,16 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
         });
       } catch (error) {
         return "Invalid Date";
+      }
+    };
+
+    const handleOpenReceipt = () => {
+      if (creditNote.kra_submission?.qr_code_data) {
+        window.open(
+          creditNote.kra_submission.qr_code_data,
+          "_blank",
+          "noopener,noreferrer"
+        );
       }
     };
 
@@ -518,6 +541,24 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
               </div>
             </div>
           </div>
+
+          {/* KRA QR Code Section */}
+          {creditNote.kra_submission?.qr_code_data && (
+            <div className="mt-8 pt-6">
+              <div className="">
+                <QRCode
+                  value={creditNote.kra_submission.qr_code_data}
+                  size={150}
+                  style={{
+                    height: "auto",
+                    maxWidth: "100px",
+                    width: "100px",
+                  }}
+                  viewBox="0 0 256 256"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Notes Section */}
           {(creditNote.customer_memo || creditNote.private_note) && (
