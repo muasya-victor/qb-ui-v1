@@ -55,7 +55,7 @@ const CreditNoteTable = ({
     { key: "actions", label: "Actions", sortable: false },
   ];
 
-  // Fetch available invoices for dropdown
+
   const fetchAvailableInvoices = async (customerName) => {
     try {
       setLoadingInvoices(true);
@@ -76,7 +76,6 @@ const CreditNoteTable = ({
   };
 
   useEffect(() => {
-    // Load available invoices on component mount
     fetchAvailableInvoices();
   }, []);
 
@@ -115,7 +114,6 @@ const CreditNoteTable = ({
     }, 1500);
   };
 
-  // Handle invoice selection change
   const handleInvoiceChange = async (creditNoteId, invoiceId) => {
     try {
       setUpdatingInvoice(creditNoteId);
@@ -142,7 +140,6 @@ const CreditNoteTable = ({
     }
   };
 
-  // Handle remove invoice link
   const handleRemoveInvoice = async (creditNoteId) => {
     try {
       setUpdatingInvoice(creditNoteId);
