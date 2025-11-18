@@ -20,6 +20,30 @@ interface CreditNote {
   is_kra_validated?: boolean;
   kra_submissions?: any[];
   line_items?: any[];
+  related_invoice?: RelatedInvoice;
+}
+
+interface RelatedInvoice {
+  id: string;
+  doc_number: string;
+  qb_invoice_id: string;
+  customer_name: string;
+  customer_display: string;
+  customer?: any;
+  total_amt: number;
+  txn_date: string;
+  due_date: string;
+  status: string;
+}
+
+interface InvoiceForDropdown {
+  id: string;
+  doc_number: string;
+  qb_invoice_id: string;
+  txn_date: string;
+  total_amt: number;
+  customer: any;
+  customer_display: string;
 }
 
 interface PaginationInfo {
@@ -50,6 +74,8 @@ interface CreditNotesResponse {
     outstanding_balance: number;
     kra_validated_credit_notes: number;
     validation_rate: number;
+    credit_notes_with_linked_invoices: number;
+    invoice_link_rate: number;
   };
   kra_stats?: {
     total_submissions: number;
@@ -96,7 +122,23 @@ interface CustomerAnalysisResponse {
     stub_customers: number;
     credit_notes_with_stub_customers: number;
     quality_score: number;
+    credit_notes_with_linked_invoices: number;
+    credit_notes_without_linked_invoices: number;
+    invoice_link_score: number;
   };
+  error?: string;
+}
+
+interface AvailableInvoicesResponse {
+  success: boolean;
+  invoices: InvoiceForDropdown[];
+  count: number;
+}
+
+interface UpdateInvoiceResponse {
+  success: boolean;
+  message: string;
+  credit_note?: CreditNote;
   error?: string;
 }
 
@@ -410,6 +452,102 @@ class CreditNoteService {
     }
   }
 
+  // ✅ NEW: Get available invoices for linking
+  async getAvailableInvoices(
+    search?: string,
+    customerName?: string,
+    limit?: number
+  ): Promise<AvailableInvoicesResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      if (customerName) params.append("customer_name", customerName);
+      if (limit) params.append("limit", limit.toString());
+
+      const url = `${this.baseURL}/credit-notes/available-invoices/?${params}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching available invoices:", error);
+      throw error;
+    }
+  }
+
+  // ✅ NEW: Update related invoice for a credit note
+  async updateRelatedInvoice(
+    creditNoteId: string,
+    invoiceId: string | null
+  ): Promise<UpdateInvoiceResponse> {
+    try {
+      if (invoiceId === null) {
+        // Remove related invoice
+        const response = await fetch(
+          `${this.baseURL}/credit-notes/${creditNoteId}/remove-related-invoice/`,
+          {
+            method: "DELETE",
+            headers: this.getAuthHeaders(),
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: "Unknown error" }));
+          throw new Error(
+            errorData.error ||
+              errorData.detail ||
+              `HTTP error! status: ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+        return data;
+      } else {
+        // Update related invoice
+        const response = await fetch(
+          `${this.baseURL}/credit-notes/${creditNoteId}/update-related-invoice/`,
+          {
+            method: "PATCH",
+            headers: this.getAuthHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+              related_invoice: invoiceId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: "Unknown error" }));
+          throw new Error(
+            errorData.error ||
+              errorData.detail ||
+              `HTTP error! status: ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error("Error updating related invoice:", error);
+      throw error;
+    }
+  }
+
   // Add this method for local calculation as fallback
   private async analyzeCustomerLinksLocally(): Promise<{
     success: boolean;
@@ -420,6 +558,9 @@ class CreditNoteService {
       stub_customers: number;
       credit_notes_with_stub_customers: number;
       quality_score: number;
+      credit_notes_with_linked_invoices: number;
+      credit_notes_without_linked_invoices: number;
+      invoice_link_score: number;
     };
   }> {
     try {
@@ -436,6 +577,9 @@ class CreditNoteService {
             stub_customers: 0,
             credit_notes_with_stub_customers: 0,
             quality_score: 0,
+            credit_notes_with_linked_invoices: 0,
+            credit_notes_without_linked_invoices: 0,
+            invoice_link_score: 0,
           },
         };
       }
@@ -456,6 +600,11 @@ class CreditNoteService {
             !cn.customer_name.trim()) // Empty or null names
       ).length;
 
+      // Calculate linked invoices locally
+      const creditNotesWithLinkedInvoices = creditNotes.filter(
+        (cn) => cn.related_invoice && cn.related_invoice.id
+      ).length;
+
       return {
         success: true,
         analysis: {
@@ -468,6 +617,13 @@ class CreditNoteService {
           quality_score:
             totalCreditNotes > 0
               ? (creditNotesWithCustomers / totalCreditNotes) * 100
+              : 0,
+          credit_notes_with_linked_invoices: creditNotesWithLinkedInvoices,
+          credit_notes_without_linked_invoices:
+            totalCreditNotes - creditNotesWithLinkedInvoices,
+          invoice_link_score:
+            totalCreditNotes > 0
+              ? (creditNotesWithLinkedInvoices / totalCreditNotes) * 100
               : 0,
         },
       };
@@ -482,6 +638,9 @@ class CreditNoteService {
           stub_customers: 0,
           credit_notes_with_stub_customers: 0,
           quality_score: 0,
+          credit_notes_with_linked_invoices: 0,
+          credit_notes_without_linked_invoices: 0,
+          invoice_link_score: 0,
         },
       };
     }
@@ -643,10 +802,14 @@ export default creditNoteService;
 // Export types for use in other components
 export type {
   CreditNote,
+  RelatedInvoice,
+  InvoiceForDropdown,
   CreditNotesResponse,
   SyncResponse,
   PaginationInfo,
   CreditNoteQueryParams,
   KRAValidationResponse,
   CustomerAnalysisResponse,
+  AvailableInvoicesResponse,
+  UpdateInvoiceResponse,
 };

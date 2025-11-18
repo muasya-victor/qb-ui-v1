@@ -1,6 +1,6 @@
 // components/credit-notes/CreditNoteTable.jsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChevronUpDownIcon,
   ChevronUpIcon,
@@ -10,7 +10,17 @@ import StatusBadge from "../ui/StatusBadge";
 import KRAStatusBadge from "../kra/KRAStatusBadge";
 import ValidationModal from "../kra/ValidationModal";
 import SubmissionDetailsModal from "../invoices/SubmissionDetailsModal";
-import creditNoteService from "../../services/CreditNoteService";
+import creditNoteService, {
+  InvoiceForDropdown,
+} from "../../services/CreditNoteService";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { toast } from "../../lib/toast";
 
 const CreditNoteTable = ({
   creditNotes,
@@ -21,16 +31,21 @@ const CreditNoteTable = ({
   onSort,
   onViewCreditNote,
   onValidationComplete,
+  onInvoiceLinkUpdate,
 }) => {
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedCreditNote, setSelectedCreditNote] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [availableInvoices, setAvailableInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [updatingInvoice, setUpdatingInvoice] = useState(null);
 
-  // Table headers matching invoice table structure
+  // Table headers with new Linked Invoice column
   const tableHeaders = [
     { key: "doc_number", label: "Credit Note #", sortable: true },
     { key: "customer_name", label: "Customer", sortable: true },
+    { key: "linked_invoice", label: "Linked Invoice", sortable: false },
     { key: "total_amt", label: "Credit Amount", sortable: true },
     { key: "balance", label: "Available Credit", sortable: true },
     { key: "status", label: "Status", sortable: false },
@@ -40,8 +55,33 @@ const CreditNoteTable = ({
     { key: "actions", label: "Actions", sortable: false },
   ];
 
+  // Fetch available invoices for dropdown
+  const fetchAvailableInvoices = async (customerName) => {
+    try {
+      setLoadingInvoices(true);
+      const response = await creditNoteService.getAvailableInvoices(
+        "", // search term
+        customerName, // filter by customer name
+        100 // limit
+      );
+      if (response.success) {
+        setAvailableInvoices(response.invoices || []);
+      }
+    } catch (error) {
+      console.error("Error fetching available invoices:", error);
+      toast.error("Failed to load available invoices");
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load available invoices on component mount
+    fetchAvailableInvoices();
+  }, []);
+
   const handleValidateClick = (creditNote) => {
-    console.log("Selected Credit Note:", creditNote); // Debug
+    console.log("Selected Credit Note:", creditNote);
     setSelectedCreditNote(creditNote);
     setValidationModalOpen(true);
   };
@@ -58,7 +98,6 @@ const CreditNoteTable = ({
         creditNoteId
       );
 
-      // Notify parent to refresh data
       if (onValidationComplete) {
         onValidationComplete();
       }
@@ -70,13 +109,64 @@ const CreditNoteTable = ({
   };
 
   const handleValidationSuccess = () => {
-    // Close the modal
     setValidationModalOpen(false);
-
-    // Reload the page after a short delay to show success message
     setTimeout(() => {
       window.location.reload();
     }, 1500);
+  };
+
+  // Handle invoice selection change
+  const handleInvoiceChange = async (creditNoteId, invoiceId) => {
+    try {
+      setUpdatingInvoice(creditNoteId);
+
+      const result = await creditNoteService.updateRelatedInvoice(
+        creditNoteId,
+        invoiceId
+      );
+
+      if (result.success) {
+        toast.success("Invoice linked successfully");
+        if (onInvoiceLinkUpdate) {
+          onInvoiceLinkUpdate();
+        }
+      } else {
+        toast.error(`Failed to link invoice: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error(
+        `Failed to link invoice: ${error.message || "Please try again"}`
+      );
+    } finally {
+      setUpdatingInvoice(null);
+    }
+  };
+
+  // Handle remove invoice link
+  const handleRemoveInvoice = async (creditNoteId) => {
+    try {
+      setUpdatingInvoice(creditNoteId);
+
+      const result = await creditNoteService.updateRelatedInvoice(
+        creditNoteId,
+        null
+      );
+
+      if (result.success) {
+        toast.success("Invoice link removed successfully");
+        if (onInvoiceLinkUpdate) {
+          onInvoiceLinkUpdate();
+        }
+      } else {
+        toast.error(`Failed to remove invoice link: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error(
+        `Failed to remove invoice link: ${error.message || "Please try again"}`
+      );
+    } finally {
+      setUpdatingInvoice(null);
+    }
   };
 
   const getKRAStatus = (creditNote) => {
@@ -88,11 +178,8 @@ const CreditNoteTable = ({
   };
 
   const canValidateKRA = (creditNote) => {
-    // Only allow validation if no successful submission exists
     const submission = creditNote.kra_submission;
     if (!submission) return true;
-
-    // Allow re-submission for failed submissions
     return submission.status === "failed";
   };
 
@@ -147,6 +234,12 @@ const CreditNoteTable = ({
       return <ChevronUpIcon className="w-4 h-4 text-blue-500" />;
     }
     return <ChevronDownIcon className="w-4 h-4 text-blue-500" />;
+  };
+
+  const getInvoiceDisplayText = (invoice) => {
+    return `${invoice.doc_number} - ${invoice.customer_display} (${formatAmount(
+      invoice.total_amt
+    )})`;
   };
 
   if (loading) {
@@ -265,6 +358,71 @@ const CreditNoteTable = ({
                       <div className="text-sm text-gray-900 font-medium">
                         {creditNote.customer_name || "N/A"}
                       </div>
+                    </td>
+
+                    {/* Linked Invoice */}
+                    <td className="px-6 py-4">
+                      {creditNote.related_invoice ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900">
+                              {creditNote.related_invoice.doc_number}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {creditNote.related_invoice.customer_display}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveInvoice(creditNote.id)}
+                            disabled={updatingInvoice === creditNote.id}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                            title="Remove invoice link"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <Select
+                          onValueChange={(value) =>
+                            handleInvoiceChange(creditNote.id, value)
+                          }
+                          disabled={
+                            updatingInvoice === creditNote.id || loadingInvoices
+                          }
+                        >
+                          <SelectTrigger className="w-full max-w-xs">
+                            <SelectValue
+                              placeholder={
+                                loadingInvoices
+                                  ? "Loading invoices..."
+                                  : "Select invoice"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              No invoice linked
+                            </SelectItem>
+                            {availableInvoices.map((invoice) => (
+                              <SelectItem key={invoice.id} value={invoice.id}>
+                                {getInvoiceDisplayText(invoice)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </td>
 
                     {/* Credit Amount */}
@@ -392,14 +550,11 @@ const CreditNoteTable = ({
                     • Currency: {companyInfo.currency_code}
                   </span>
                 )}
-                {/* KRA Stats Summary */}
+                {/* Linked Invoices Stats */}
                 <span className="ml-4 text-gray-500">
-                  • KRA Validated:{" "}
-                  {
-                    creditNotes.filter(
-                      (cn) => cn.kra_submission?.status === "success"
-                    ).length
-                  }
+                  • Linked Invoices:{" "}
+                  {creditNotes.filter((cn) => cn.related_invoice).length}/
+                  {creditNotes.length}
                 </span>
               </div>
               <div className="text-xs text-gray-500">
@@ -410,11 +565,11 @@ const CreditNoteTable = ({
         )}
       </div>
 
-      {/* Validation Modal - FIXED: Use creditNote prop instead of invoice */}
+      {/* Validation Modal */}
       <ValidationModal
         isOpen={validationModalOpen}
         onClose={() => setValidationModalOpen(false)}
-        creditNote={selectedCreditNote} // Changed from invoice to creditNote
+        creditNote={selectedCreditNote}
         onValidate={handleValidation}
         onValidationSuccess={handleValidationSuccess}
         type="credit_note"
