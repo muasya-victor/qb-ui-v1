@@ -100,7 +100,8 @@ class ApiService {
   constructor() {
     this.baseUrl =
       process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://api.v2.smartinvoice.co.ke/api";
+      // "https://api.v2.smartinvoice.co.ke/api";
+      "https://staging.v2.smartinvoice.co.ke/api";
   }
 
   // Add this method to set the logout callback
