@@ -494,6 +494,36 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
           )}
 
           {/* {JSON.stringify(invoice.kra_submission)} */}
+          {invoice.kra_submission && (
+            <div className="flex flex-col gap-4 py-4 text-xs">
+              <div className="flex gap-2">
+                <span className="font-bold">Receipt Signature: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.rcptSign}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Receipt Number: </span>
+                <span>{invoice?.kra_submission?.kra_invoice_number}</span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Internal Data: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.intrlData}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Invoice Number: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.sdcId}/
+                  {invoice?.kra_submission?.kra_invoice_number}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Notes Section */}
           {(invoice.customer_memo || invoice.private_note) && (
