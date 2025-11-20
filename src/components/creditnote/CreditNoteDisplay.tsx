@@ -500,6 +500,37 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
             </div>
           )}
 
+          {creditNote.kra_submission && (
+            <div className="flex flex-col gap-4 py-4 text-xs">
+              <div className="flex gap-2">
+                <span className="font-bold">Receipt Signature: </span>
+                <span>
+                  {creditNote?.kra_submission?.response_data?.data?.rcptSign}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Receipt Number: </span>
+                <span>{creditNote?.kra_submission?.kra_invoice_number}</span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Internal Data: </span>
+                <span>
+                  {creditNote?.kra_submission?.response_data?.data?.intrlData}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Invoice Number: </span>
+                <span>
+                  {creditNote?.kra_submission?.response_data?.data?.sdcId}/
+                  {creditNote?.kra_submission?.kra_invoice_number}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Notes Section */}
           {(creditNote.customer_memo || creditNote.private_note) && (
             <div className="mt-8 pt-6 border-t border-gray-300 hidden">

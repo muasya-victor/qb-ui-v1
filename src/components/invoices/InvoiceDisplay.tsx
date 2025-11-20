@@ -493,6 +493,8 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
             </div>
           )}
 
+          {/* {JSON.stringify(invoice.kra_submission)} */}
+
           {/* Notes Section */}
           {(invoice.customer_memo || invoice.private_note) && (
             <div className="mt-8 pt-6 border-t border-gray-300 hidden">
