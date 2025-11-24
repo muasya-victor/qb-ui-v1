@@ -510,8 +510,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
               </div>
 
               <div className="flex gap-2">
-                <span className="font-bold">Receipt Number: </span>
-                <span>{creditNote?.kra_submission?.kra_invoice_number}</span>
+                <span className="font-bold">SdcId: </span>
+                <span>
+                  {creditNote?.kra_submission?.response_data?.data?.sdcId}
+                </span>
               </div>
 
               <div className="flex gap-2">

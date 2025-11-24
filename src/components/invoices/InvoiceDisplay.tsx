@@ -504,8 +504,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
               </div>
 
               <div className="flex gap-2">
-                <span className="font-bold">Receipt Number: </span>
-                <span>{invoice?.kra_submission?.kra_invoice_number}</span>
+                <span className="font-bold">SdcId: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.sdcId}
+                </span>
               </div>
 
               <div className="flex gap-2">
