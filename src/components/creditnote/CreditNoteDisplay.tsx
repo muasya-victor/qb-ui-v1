@@ -252,6 +252,27 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
               />
             </div>
 
+            <div className="flex-1">
+              <div className="flex flex-col gap-2 mt-2">
+                <h2 className="font-semibold">SHIP TO</h2>
+                <div>
+                  {creditNote?.raw_data?.ShipFromAddr?.Line1 ||
+                    creditNote?.raw_data?.ShipFromAddr?.Line2}
+                </div>
+              </div>
+
+              <div
+                className={`border-gray-300 w-full h-2 mt-2 ${
+                  activeCompany ? "!text-white" : "text-gray-800"
+                }`}
+                style={{
+                  backgroundColor: activeCompany
+                    ? activeCompany?.brand_color
+                    : "#f3f4f6",
+                }}
+              />
+            </div>
+
             {/* Credit Note Header - Right aligned */}
             <div className="text-right flex flex-col items-end justify-between gap-4 !h-[100%] flex-1">
               <h2

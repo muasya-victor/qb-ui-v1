@@ -267,11 +267,11 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
             <div className="w-full ">
               <div className="flex flex-col gap-2 mt-2">
                 <h2 className="font-semibold">SHIP TO</h2>
-                <div>{invoice?.raw_data?.ShipAddr?.Line1}</div>
-                <div className="flex items-center gap-2">
+                <div>{invoice?.customer?.shipping_address}</div>
+                {/* <div className="flex items-center gap-2">
                   {invoice?.raw_data?.ShipAddr?.City} ,
                   {invoice?.raw_data?.ShipAddr?.PostalCode}
-                </div>
+                </div> */}
               </div>
 
               <div
