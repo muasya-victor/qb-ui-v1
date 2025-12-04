@@ -98,9 +98,7 @@ class ApiService {
   private onUnauthorizedCallback: (() => void) | null = null;
 
   constructor() {
-    this.baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://api.prod.v2.smartinvoice.co.ke/api";
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
   }
 
   // Add this method to set the logout callback

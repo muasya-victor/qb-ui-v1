@@ -231,16 +231,24 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                     <span>{companyInfo.contact_info.website}</span>
                   </div>
                 )}
+                {companyInfo.kra_pin && (
+                  <p className="text-gray-700 text-sm">{companyInfo.kra_pin}</p>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-end text-black flex-1">
+          <div className="flex w-full justify-end">
+            {/* Invoice Header - Right aligned */}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-black flex-1">
             {/* Company Logo and Info - Left aligned */}
-            <div className="flex-1">
+            <div className="w-full">
               <div className="flex flex-col gap-2 mt-2">
                 <h2 className="font-semibold">BILL TO</h2>
                 <div>{invoice?.customer_name}</div>
+                <div>{invoice?.customer?.kra_pin || "provide kra pin"}</div>
               </div>
 
               <div
@@ -255,8 +263,30 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
               />
             </div>
 
-            {/* Invoice Header - Right aligned */}
-            <div className="text-right flex flex-col items-end justify-between gap-4 !h-[100%] flex-1">
+            {/* Shipping Address */}
+            <div className="w-full ">
+              <div className="flex flex-col gap-2 mt-2">
+                <h2 className="font-semibold">SHIP TO</h2>
+                <div>{invoice?.customer?.shipping_address}</div>
+                {/* <div className="flex items-center gap-2">
+                  {invoice?.raw_data?.ShipAddr?.City} ,
+                  {invoice?.raw_data?.ShipAddr?.PostalCode}
+                </div> */}
+              </div>
+
+              <div
+                className={`border-gray-300 w-full h-2 mt-2 ${
+                  activeCompany ? "!text-white" : "text-gray-800"
+                }`}
+                style={{
+                  backgroundColor: activeCompany
+                    ? activeCompany?.brand_color
+                    : "#f3f4f6",
+                }}
+              />
+            </div>
+
+            <div className="text-right flex flex-col items-end justify-between gap-2 !h-[100%] w-full">
               <h2
                 className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
                   activeCompany ? "!text-white" : "text-gray-800"
@@ -272,7 +302,7 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
               </h2>
 
               <div
-                className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
+                className={`border-gray-300 flex items-center gap-2 p-2 w-fit text-xs ${
                   activeCompany ? "!text-white" : "text-gray-800"
                 }`}
                 style={{
@@ -282,12 +312,12 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                 }}
               >
                 <Calendar className="w-4 h-4 text-white" />
-                <span className="">Date:</span>
+                <span className="text-xs">Date:</span>
                 <span>{formatDate(invoice.due_date)}</span>
               </div>
 
               <div
-                className={`border-gray-300 flex items-center gap-2 p-2 w-fit ${
+                className={`border-gray-300 flex items-center gap-2 p-2 w-full text-xs ${
                   activeCompany ? "!text-white" : "text-gray-800"
                 }`}
                 style={{
@@ -297,7 +327,7 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                 }}
               >
                 <Calendar className="w-4 h-4 text-white" />
-                <span className="">Due Date:</span>
+                <span className="text-xs">Due Date:</span>
                 <span>{formatDate(invoice.txn_date)}</span>
               </div>
             </div>
@@ -489,6 +519,40 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                   }}
                   viewBox="0 0 256 256"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* {JSON.stringify(invoice.kra_submission)} */}
+          {invoice.kra_submission && (
+            <div className="flex flex-col gap-4 py-4 text-xs">
+              <div className="flex gap-2">
+                <span className="font-bold">Receipt Signature: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.rcptSign}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">CU Number: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.sdcId}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Internal Data: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.intrlData}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="font-bold">Invoice Number: </span>
+                <span>
+                  {invoice?.kra_submission?.response_data?.data?.sdcId}/
+                  {invoice?.kra_submission?.kra_invoice_number}
+                </span>
               </div>
             </div>
           )}
