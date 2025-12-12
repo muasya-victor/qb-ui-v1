@@ -29,12 +29,12 @@ const Sidebar: React.FC = () => {
       label: "Invoices",
       path: "/dashboard/invoices",
     },
-    // {
-    //   id: "creditnote",
-    //   icon: Wallet,
-    //   label: "Credit Notes",
-    //   path: "/dashboard/creditnote",
-    // },
+    {
+      id: "creditnote",
+      icon: Wallet,
+      label: "Credit Notes",
+      path: "/dashboard/creditnote",
+    },
     {
       id: "customers",
       icon: Users,
