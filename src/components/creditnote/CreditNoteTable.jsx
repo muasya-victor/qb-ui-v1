@@ -470,22 +470,28 @@ const CreditNoteTable = ({
 
       return (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2">
-                <div className="text-sm font-medium text-gray-900">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+              {" "}
+              {/* Added min-w-0 for proper text truncation */}
+              <div className="flex items-center space-x-2 ">
+                <div className="text-xs font-medium text-gray-900 truncate">
+                  {" "}
+                  {/* Added truncate */}
                   {creditNote.related_invoice.doc_number}
                 </div>
                 {getInvoiceStatusBadge(summary || creditNote.related_invoice)}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 truncate">
+                {" "}
+                {/* Added truncate */}
                 {creditNote.related_invoice.customer_display}
               </div>
             </div>
             <button
               onClick={() => handleRemoveInvoice(creditNote.id)}
               disabled={updatingInvoice === creditNote.id}
-              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50 flex-shrink-0" // Added flex-shrink-0
               title="Remove invoice link"
             >
               <svg
@@ -545,15 +551,15 @@ const CreditNoteTable = ({
             </SelectItem>
             {availableInvoices.map((invoice) => (
               <SelectItem key={invoice.id} value={invoice.id}>
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between">
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2 justify-between">
                     <span className="font-medium">{invoice.doc_number}</span>
                     {getInvoiceStatusBadge(invoice)}
                   </div>
                   <div className="text-xs text-gray-500">
                     {invoice.customer_display}
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="flex items-center justify-between text-xs gap-2">
                     <span>Total: {formatAmount(invoice.total_amt)}</span>
                     {invoice.available_balance !== undefined && (
                       <span className="font-medium text-blue-600">
