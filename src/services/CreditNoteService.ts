@@ -21,6 +21,8 @@ interface CreditNote {
   kra_submissions?: any[];
   line_items?: any[];
   related_invoice?: RelatedInvoice;
+  available_balance?: number;
+  is_fully_credited?: boolean;
 }
 
 interface RelatedInvoice {
@@ -34,6 +36,10 @@ interface RelatedInvoice {
   txn_date: string;
   due_date: string;
   status: string;
+  available_balance?: number;
+  is_fully_credited?: boolean;
+  calculated_total_credits?: number;
+  credit_utilization_percentage?: number;
 }
 
 interface InvoiceForDropdown {
@@ -44,6 +50,8 @@ interface InvoiceForDropdown {
   total_amt: number;
   customer: any;
   customer_display: string;
+  available_balance?: number;
+  is_fully_credited?: boolean;
 }
 
 interface PaginationInfo {
@@ -53,6 +61,7 @@ interface PaginationInfo {
   page_size: number;
   current_page: number;
   total_pages: number;
+  has_more?: boolean;
 }
 
 interface CreditNotesResponse {
@@ -83,6 +92,7 @@ interface CreditNotesResponse {
     failed_submissions: number;
     pending_submissions: number;
   };
+  summary?: any;
 }
 
 interface CreditNoteQueryParams {
@@ -107,10 +117,13 @@ interface KRAValidationResponse {
   message: string;
   submission_id?: string;
   kra_invoice_number?: number;
+  kra_credit_note_number?: number;
+  trd_credit_note_no?: string;
   receipt_signature?: string;
   qr_code_data?: string;
   kra_response?: any;
   error?: string;
+  validation_details?: any;
 }
 
 interface CustomerAnalysisResponse {
@@ -133,6 +146,12 @@ interface AvailableInvoicesResponse {
   success: boolean;
   invoices: InvoiceForDropdown[];
   count: number;
+  summary?: any;
+  pagination?: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
 }
 
 interface UpdateInvoiceResponse {
@@ -140,7 +159,102 @@ interface UpdateInvoiceResponse {
   message: string;
   credit_note?: CreditNote;
   error?: string;
+  validation_details?: any;
+  details?: any;
 }
+
+// ================ NEW INTERFACES FOR CREDIT VALIDATION ================
+
+interface CreditValidationRequest {
+  invoice_id: string;
+  credit_amount: number;
+}
+
+interface CreditValidationResponse {
+  success: boolean;
+  validation: {
+    valid: boolean;
+    message: string;
+    available_balance?: number;
+    invoice_number?: string;
+    invoice_total?: number;
+    calculated_total_credits?: number;
+    requested_amount?: number;
+    error?: string;
+    has_invoice?: boolean;
+    credit_note_amount?: number;
+  };
+  error?: string;
+}
+
+interface CreditValidationResult {
+  valid: boolean;
+  message: string;
+  available_balance?: number;
+  invoice_number?: string;
+  invoice_total?: number;
+  calculated_total_credits?: number;
+  requested_amount?: number;
+  error?: string;
+}
+
+interface InvoiceCreditSummary {
+  success: boolean;
+  summary?: {
+    invoice_id: string;
+    invoice_number: string;
+    invoice_total: number;
+    calculated_total_credits: number;
+    available_credit_balance: number;
+    is_fully_credited: boolean;
+    credit_utilization_percentage: number;
+    linked_credit_notes_count: number;
+    linked_credit_notes?: Array<{
+      id: string;
+      doc_number: string;
+      txn_date: string;
+      amount: number;
+      customer_name: string;
+    }>;
+  };
+  error?: string;
+}
+
+interface FullyCreditedInvoicesResponse {
+  success: boolean;
+  invoices: Array<{
+    id: string;
+    doc_number: string;
+    total_amt: number;
+    calculated_total_credits: number;
+    available_balance: number;
+    is_fully_credited: boolean;
+    credit_utilization_percentage: number;
+    customer_name: string;
+  }>;
+  count: number;
+  pagination?: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+}
+
+interface InvoiceWithCreditInfo {
+  id: string;
+  doc_number: string;
+  qb_invoice_id: string;
+  txn_date: string;
+  total_amt: number;
+  customer: any;
+  customer_display: string;
+  available_balance: number;
+  is_fully_credited: boolean;
+  calculated_total_credits?: number;
+  credit_utilization_percentage?: number;
+}
+
+// ================ END OF NEW INTERFACES ================
 
 class CreditNoteService {
   private baseURL: string;
@@ -174,7 +288,7 @@ class CreditNoteService {
     return null;
   }
 
-  private buildQueryString(params: CreditNoteQueryParams): string {
+  private buildQueryString(params: any): string {
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -186,31 +300,48 @@ class CreditNoteService {
     return searchParams.toString();
   }
 
+  private async handleRequest<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    try {
+      const defaultOptions: RequestInit = {
+        headers: this.getAuthHeaders(),
+        credentials: "include",
+        ...options,
+      };
+
+      const response = await fetch(url, defaultOptions);
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            errorData.message ||
+            `HTTP error! status: ${response.status}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Request failed for ${url}:`, error);
+      throw error;
+    }
+  }
+
+  // ================ EXISTING METHODS (UPDATED WHERE NEEDED) ================
+
   async getCreditNotes(
     params: CreditNoteQueryParams = {}
   ): Promise<CreditNotesResponse> {
-    try {
-      const queryString = this.buildQueryString(params);
-      const url = `${this.baseURL}/credit-notes/${
-        queryString ? `?${queryString}` : ""
-      }`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching credit notes:", error);
-      throw error;
-    }
+    const queryString = this.buildQueryString(params);
+    const url = `${this.baseURL}/credit-notes/${
+      queryString ? `?${queryString}` : ""
+    }`;
+    return this.handleRequest<CreditNotesResponse>(url);
   }
 
   async getAllCreditNotes(
@@ -294,59 +425,17 @@ class CreditNoteService {
   async getCreditNote(
     creditNoteId: string
   ): Promise<{ success: boolean; credit_note: CreditNote }> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/credit-notes/${creditNoteId}/`,
-        {
-          method: "GET",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching credit note:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/${creditNoteId}/`;
+    return this.handleRequest<{ success: boolean; credit_note: CreditNote }>(
+      url
+    );
   }
 
   async syncCreditNotesFromQuickBooks(): Promise<SyncResponse> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/credit-notes/sync_from_quickbooks/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error ||
-            errorData.detail ||
-            `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error syncing credit notes:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/sync_from_quickbooks/`;
+    return this.handleRequest<SyncResponse>(url, { method: "POST" });
   }
 
-  // ✅ NEW: Smart Sync for Credit Notes
   async smartSyncCreditNotes(): Promise<{
     success: boolean;
     synced_count: number;
@@ -355,33 +444,17 @@ class CreditNoteService {
     message: string;
     error?: string;
   }> {
-    try {
-      const response = await fetch(`${this.baseURL}/credit-notes/smart-sync/`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error ||
-            errorData.detail ||
-            `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error with smart sync:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/smart-sync/`;
+    return this.handleRequest<{
+      success: boolean;
+      synced_count: number;
+      failed_count: number;
+      stub_customers_created: number;
+      message: string;
+      error?: string;
+    }>(url, { method: "POST" });
   }
 
-  // ✅ NEW: Analyze Customer Links for Credit Notes
   async analyzeCustomerLinks(): Promise<CustomerAnalysisResponse> {
     try {
       const response = await fetch(
@@ -394,7 +467,6 @@ class CreditNoteService {
       );
 
       if (!response.ok) {
-        // If endpoint doesn't exist (404) or server error (500), calculate locally
         if (response.status === 404 || response.status === 500) {
           console.warn(
             "Analyze customer links endpoint not available, calculating locally"
@@ -415,7 +487,6 @@ class CreditNoteService {
     }
   }
 
-  // ✅ NEW: Enhance Stub Customers for Credit Notes
   async enhanceStubCustomers(): Promise<{
     success: boolean;
     enhanced_count: number;
@@ -423,132 +494,58 @@ class CreditNoteService {
     message: string;
     error?: string;
   }> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/credit-notes/enhance-stub-customers/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error ||
-            errorData.detail ||
-            `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error enhancing stub customers:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/enhance-stub-customers/`;
+    return this.handleRequest<{
+      success: boolean;
+      enhanced_count: number;
+      failed_count: number;
+      message: string;
+      error?: string;
+    }>(url, { method: "POST" });
   }
 
-  // ✅ NEW: Get available invoices for linking
+  // ================ UPDATED AVAILABLE INVOICES METHOD ================
   async getAvailableInvoices(
     search?: string,
     customerName?: string,
-    limit?: number
+    limit?: number,
+    offset?: number,
+    min_balance?: number
   ): Promise<AvailableInvoicesResponse> {
-    try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (customerName) params.append("customer_name", customerName);
-      if (limit) params.append("limit", limit.toString());
+    const params: any = {};
+    if (search) params.search = search;
+    if (customerName) params.customer_name = customerName;
+    if (limit) params.limit = limit;
+    if (offset) params.offset = offset;
+    if (min_balance !== undefined) params.min_balance = min_balance;
 
-      const url = `${this.baseURL}/credit-notes/available-invoices/?${params}`;
+    const queryString = this.buildQueryString(params);
+    const url = `${this.baseURL}/credit-notes/available-invoices/?${queryString}`;
 
-      const response = await fetch(url, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching available invoices:", error);
-      throw error;
-    }
+    return this.handleRequest<AvailableInvoicesResponse>(url);
   }
 
-  // ✅ NEW: Update related invoice for a credit note
+  // ================ UPDATED UPDATE RELATED INVOICE METHOD ================
   async updateRelatedInvoice(
     creditNoteId: string,
     invoiceId: string | null
   ): Promise<UpdateInvoiceResponse> {
-    try {
-      if (invoiceId === null) {
-        // Remove related invoice
-        const response = await fetch(
-          `${this.baseURL}/credit-notes/${creditNoteId}/remove-related-invoice/`,
-          {
-            method: "DELETE",
-            headers: this.getAuthHeaders(),
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ error: "Unknown error" }));
-          throw new Error(
-            errorData.error ||
-              errorData.detail ||
-              `HTTP error! status: ${response.status}`
-          );
-        }
-
-        const data = await response.json();
-        return data;
-      } else {
-        // Update related invoice
-        const response = await fetch(
-          `${this.baseURL}/credit-notes/${creditNoteId}/update-related-invoice/`,
-          {
-            method: "PATCH",
-            headers: this.getAuthHeaders(),
-            credentials: "include",
-            body: JSON.stringify({
-              related_invoice: invoiceId,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ error: "Unknown error" }));
-          throw new Error(
-            errorData.error ||
-              errorData.detail ||
-              `HTTP error! status: ${response.status}`
-          );
-        }
-
-        const data = await response.json();
-        return data;
-      }
-    } catch (error) {
-      console.error("Error updating related invoice:", error);
-      throw error;
+    if (invoiceId === null) {
+      const url = `${this.baseURL}/credit-notes/${creditNoteId}/remove-related-invoice/`;
+      return this.handleRequest<UpdateInvoiceResponse>(url, {
+        method: "DELETE",
+      });
+    } else {
+      const url = `${this.baseURL}/credit-notes/${creditNoteId}/update-related-invoice/`;
+      return this.handleRequest<UpdateInvoiceResponse>(url, {
+        method: "PATCH",
+        body: JSON.stringify({
+          related_invoice: invoiceId,
+        }),
+      });
     }
   }
 
-  // Add this method for local calculation as fallback
   private async analyzeCustomerLinksLocally(): Promise<{
     success: boolean;
     analysis: {
@@ -564,7 +561,6 @@ class CreditNoteService {
     };
   }> {
     try {
-      // Get all credit notes to analyze locally
       const response = await this.getCreditNotes({ page_size: 1000 });
 
       if (!response.success || !response.credit_notes) {
@@ -587,7 +583,6 @@ class CreditNoteService {
       const creditNotes = response.credit_notes;
       const totalCreditNotes = creditNotes.length;
 
-      // Calculate customer links locally
       const creditNotesWithCustomers = creditNotes.filter(
         (cn) => cn.customer_name && cn.customer_name !== "Unknown Customer"
       ).length;
@@ -597,10 +592,9 @@ class CreditNoteService {
           cn.customer_name &&
           (cn.customer_name.startsWith("Customer ") ||
             cn.customer_name.includes("Stub") ||
-            !cn.customer_name.trim()) // Empty or null names
+            !cn.customer_name.trim())
       ).length;
 
-      // Calculate linked invoices locally
       const creditNotesWithLinkedInvoices = creditNotes.filter(
         (cn) => cn.related_invoice && cn.related_invoice.id
       ).length;
@@ -646,66 +640,18 @@ class CreditNoteService {
     }
   }
 
-  // KRA Validation Methods for Credit Notes
   async validateCreditNoteToKRA(
     creditNoteId: string
   ): Promise<KRAValidationResponse> {
-    try {
-      console.log(`Validating credit note ${creditNoteId} with KRA...`);
-
-      const response = await fetch(
-        `${this.baseURL}/credit-notes/${creditNoteId}/submit_to_kra/`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error ||
-            errorData.detail ||
-            `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        console.log("KRA validation successful:", data);
-      } else {
-        console.error("KRA validation failed:", data.error);
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error validating credit note with KRA:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/${creditNoteId}/submit_to_kra/`;
+    return this.handleRequest<KRAValidationResponse>(url, {
+      method: "POST",
+    });
   }
 
   async getCreditNoteStats() {
-    try {
-      const response = await fetch(`${this.baseURL}/credit-notes/stats/`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching credit note stats:", error);
-      throw error;
-    }
+    const url = `${this.baseURL}/credit-notes/stats/`;
+    return this.handleRequest<any>(url);
   }
 
   async bulkValidateCreditNotesToKRA(
@@ -748,7 +694,8 @@ class CreditNoteService {
             results.push({
               creditNoteId,
               success: true,
-              kraInvoiceNumber: result.kra_invoice_number,
+              kraInvoiceNumber:
+                result.kra_credit_note_number || result.kra_invoice_number,
             });
           } else {
             failedCount++;
@@ -763,7 +710,6 @@ class CreditNoteService {
             );
           }
 
-          // Small delay to avoid overwhelming the API
           await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (error: any) {
           failedCount++;
@@ -793,6 +739,295 @@ class CreditNoteService {
       throw error;
     }
   }
+
+  // ================ NEW CREDIT VALIDATION METHODS ================
+
+  /**
+   * Validate credit note linkage to an invoice before linking
+   */
+  async validateCreditLinkage(
+    invoiceId: string,
+    creditAmount: number
+  ): Promise<CreditValidationResponse> {
+    const url = `${this.baseURL}/credit-notes/validate-credit/`;
+    return this.handleRequest<CreditValidationResponse>(url, {
+      method: "POST",
+      body: JSON.stringify({
+        invoice_id: invoiceId,
+        credit_amount: creditAmount,
+      }),
+    });
+  }
+
+  /**
+   * Validate if the current credit note can be linked to its invoice
+   */
+  async validateCurrentCreditNoteLinkage(
+    creditNoteId: string
+  ): Promise<CreditValidationResponse> {
+    const url = `${this.baseURL}/credit-notes/${creditNoteId}/validate-current/`;
+    return this.handleRequest<CreditValidationResponse>(url);
+  }
+
+  /**
+   * Get detailed credit summary for a specific invoice
+   */
+  async getInvoiceCreditSummary(
+    invoiceId: string
+  ): Promise<InvoiceCreditSummary> {
+    const url = `${this.baseURL}/credit-notes/invoice-credit-summary/${invoiceId}/`;
+    return this.handleRequest<InvoiceCreditSummary>(url);
+  }
+
+  /**
+   * Get list of fully credited invoices
+   */
+  async getFullyCreditedInvoices(
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<FullyCreditedInvoicesResponse> {
+    const params = {
+      limit,
+      offset,
+    };
+    const queryString = this.buildQueryString(params);
+    const url = `${this.baseURL}/credit-notes/fully-credited-invoices/?${queryString}`;
+    return this.handleRequest<FullyCreditedInvoicesResponse>(url);
+  }
+
+  /**
+   * Get invoices summary with credit statistics
+   */
+  async getInvoicesSummary(): Promise<{
+    success: boolean;
+    summary: any;
+    error?: string;
+  }> {
+    const url = `${this.baseURL}/credit-notes/available-invoices/`;
+    const response = await this.handleRequest<AvailableInvoicesResponse>(url);
+
+    // Extract summary from response if available
+    if (response.success && response.summary) {
+      return {
+        success: true,
+        summary: response.summary,
+      };
+    }
+
+    // Calculate summary locally if not provided
+    return {
+      success: true,
+      summary: await this.calculateInvoicesSummaryLocally(),
+    };
+  }
+
+  /**
+   * Pre-validate credit note amount for a specific invoice
+   */
+  async preValidateCreditNote(
+    creditNote: CreditNote,
+    targetInvoiceId?: string
+  ): Promise<CreditValidationResult> {
+    const invoiceId = targetInvoiceId || creditNote.related_invoice?.id;
+
+    if (!invoiceId) {
+      return {
+        valid: false,
+        message: "No invoice specified for validation",
+      };
+    }
+
+    try {
+      const response = await this.validateCreditLinkage(
+        invoiceId,
+        creditNote.total_amt
+      );
+
+      if (response.success) {
+        return response.validation;
+      } else {
+        return {
+          valid: false,
+          message: response.error || "Validation failed",
+        };
+      }
+    } catch (error: any) {
+      return {
+        valid: false,
+        message: error.message || "Validation error",
+      };
+    }
+  }
+
+  /**
+   * Calculate invoices summary locally (fallback method)
+   */
+  private async calculateInvoicesSummaryLocally(): Promise<any> {
+    try {
+      // Get all available invoices
+      const invoicesResponse = await this.getAvailableInvoices("", "", 1000);
+
+      if (!invoicesResponse.success || !invoicesResponse.invoices) {
+        return {
+          total_invoices: 0,
+          invoices_with_credits: 0,
+          fully_credited_invoices: 0,
+          total_invoice_amount: 0,
+          calculated_total_credits: 0,
+          credit_utilization_percentage: 0,
+        };
+      }
+
+      const invoices = invoicesResponse.invoices;
+      const totalInvoices = invoices.length;
+
+      // Calculate summary
+      const invoicesWithCredits = invoices.filter(
+        (inv) => (inv.available_balance || inv.total_amt) < inv.total_amt
+      ).length;
+
+      const fullyCreditedInvoices = invoices.filter(
+        (inv) => inv.is_fully_credited === true
+      ).length;
+
+      const totalInvoiceAmount = invoices.reduce(
+        (sum, inv) => sum + inv.total_amt,
+        0
+      );
+
+      const totalCreditsApplied = invoices.reduce(
+        (sum, inv) =>
+          sum + (inv.total_amt - (inv.available_balance || inv.total_amt)),
+        0
+      );
+
+      const creditUtilizationPercentage =
+        totalInvoiceAmount > 0
+          ? (totalCreditsApplied / totalInvoiceAmount) * 100
+          : 0;
+
+      return {
+        total_invoices: totalInvoices,
+        invoices_with_credits: invoicesWithCredits,
+        invoices_without_credits: totalInvoices - invoicesWithCredits,
+        fully_credited_invoices: fullyCreditedInvoices,
+        total_invoice_amount: totalInvoiceAmount,
+        calculated_total_credits: totalCreditsApplied,
+        credit_utilization_percentage: creditUtilizationPercentage,
+      };
+    } catch (error) {
+      console.error("Error calculating invoices summary locally:", error);
+      return {
+        total_invoices: 0,
+        invoices_with_credits: 0,
+        fully_credited_invoices: 0,
+        total_invoice_amount: 0,
+        calculated_total_credits: 0,
+        credit_utilization_percentage: 0,
+      };
+    }
+  }
+
+  /**
+   * Enhanced method to get available invoices with additional filtering
+   */
+  async getEnhancedAvailableInvoices(
+    options: {
+      search?: string;
+      customerName?: string;
+      minAvailableBalance?: number;
+      excludeFullyCredited?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<AvailableInvoicesResponse> {
+    const {
+      search = "",
+      customerName = "",
+      minAvailableBalance,
+      excludeFullyCredited = true,
+      limit = 50,
+      offset = 0,
+    } = options;
+
+    // Use the existing method with enhanced parameters
+    return this.getAvailableInvoices(
+      search,
+      customerName,
+      limit,
+      offset,
+      minAvailableBalance
+    );
+  }
+
+  /**
+   * Check if credit note can be linked to an invoice
+   */
+  async canLinkToInvoice(
+    creditNoteId: string,
+    invoiceId: string
+  ): Promise<{ canLink: boolean; reason?: string; availableBalance?: number }> {
+    try {
+      const creditNote = await this.getCreditNote(creditNoteId);
+      if (!creditNote.success) {
+        return { canLink: false, reason: "Credit note not found" };
+      }
+
+      const validation = await this.validateCreditLinkage(
+        invoiceId,
+        creditNote.credit_note.total_amt
+      );
+
+      return {
+        canLink: validation.validation?.valid || false,
+        reason: validation.validation?.error || validation.validation?.message,
+        availableBalance: validation.validation?.available_balance,
+      };
+    } catch (error: any) {
+      return { canLink: false, reason: error.message };
+    }
+  }
+
+  /**
+   * Batch validate multiple credit notes for linking
+   */
+  async batchValidateCreditNotes(
+    creditNoteIds: string[],
+    targetInvoiceId: string
+  ): Promise<
+    Array<{
+      creditNoteId: string;
+      canLink: boolean;
+      reason?: string;
+      availableBalance?: number;
+    }>
+  > {
+    const results = [];
+
+    for (const creditNoteId of creditNoteIds) {
+      try {
+        const result = await this.canLinkToInvoice(
+          creditNoteId,
+          targetInvoiceId
+        );
+        results.push({
+          creditNoteId,
+          ...result,
+        });
+      } catch (error: any) {
+        results.push({
+          creditNoteId,
+          canLink: false,
+          reason: error.message,
+        });
+      }
+
+      // Small delay to avoid overwhelming the API
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return results;
+  }
 }
 
 // Create and export singleton instance
@@ -812,4 +1047,11 @@ export type {
   CustomerAnalysisResponse,
   AvailableInvoicesResponse,
   UpdateInvoiceResponse,
+  // New types
+  CreditValidationRequest,
+  CreditValidationResponse,
+  CreditValidationResult,
+  InvoiceCreditSummary,
+  FullyCreditedInvoicesResponse,
+  InvoiceWithCreditInfo,
 };
