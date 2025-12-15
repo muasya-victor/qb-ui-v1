@@ -26,7 +26,7 @@ import {
 import { toast } from "../../lib/toast";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import CreditValidationModal from "./CreditValidationModal"; // We'll create this
+import CreditValidationModal from "./CreditValidationModal";
 
 const CreditNoteTable = ({
   creditNotes,
@@ -50,6 +50,7 @@ const CreditNoteTable = ({
   const [updatingInvoice, setUpdatingInvoice] = useState(null);
   const [validatingCredit, setValidatingCredit] = useState(null);
   const [invoiceCreditSummaries, setInvoiceCreditSummaries] = useState({});
+  const [linkedInvoicesCache, setLinkedInvoicesCache] = useState({});
 
   // Table headers with enhanced Linked Invoice column
   const tableHeaders = [
@@ -66,27 +67,67 @@ const CreditNoteTable = ({
     { key: "actions", label: "Actions", sortable: false },
   ];
 
-  // Fetch available invoices with credit balance information
-  const fetchAvailableInvoices = useCallback(async (customerName = "") => {
-    try {
-      setLoadingInvoices(true);
-      const response = await creditNoteService.getAvailableInvoices(
-        "", // search term
-        customerName, // filter by customer name
-        100 // limit
-      );
+  // Fetch available invoices - modified to include linked invoices
+  const fetchAvailableInvoices = useCallback(
+    async (customerName = "", forceAll = false) => {
+      try {
+        setLoadingInvoices(true);
+        const response = await creditNoteService.getAvailableInvoices(
+          "", // search term
+          forceAll ? "" : customerName, // Only filter by customer if not forced
+          100 // limit
+        );
 
-      if (response.success) {
-        // Enhanced invoices now include available_balance and is_fully_credited
-        setAvailableInvoices(response.invoices || []);
+        if (response.success) {
+          setAvailableInvoices(response.invoices || []);
+
+          // Cache linked invoices for dropdown display
+          const cache = {};
+          creditNotes.forEach((creditNote) => {
+            if (creditNote.related_invoice && creditNote.related_invoice.id) {
+              cache[creditNote.related_invoice.id] = creditNote.related_invoice;
+            }
+          });
+          setLinkedInvoicesCache(cache);
+        }
+      } catch (error) {
+        console.error("Error fetching available invoices:", error);
+        toast.error("Failed to load available invoices");
+      } finally {
+        setLoadingInvoices(false);
       }
-    } catch (error) {
-      console.error("Error fetching available invoices:", error);
-      toast.error("Failed to load available invoices");
-    } finally {
-      setLoadingInvoices(false);
+    },
+    [creditNotes]
+  );
+
+  // Get combined invoices list - always includes linked invoices
+  const getCombinedInvoices = (creditNote) => {
+    const combined = [...availableInvoices];
+
+    // Add linked invoice if it exists and is not already in the list
+    if (
+      creditNote.related_invoice &&
+      creditNote.related_invoice.id &&
+      !availableInvoices.find((inv) => inv.id === creditNote.related_invoice.id)
+    ) {
+      combined.push({
+        ...creditNote.related_invoice,
+        // Ensure we have all required properties
+        doc_number:
+          creditNote.related_invoice.doc_number ||
+          `INV-${creditNote.related_invoice.id}`,
+        customer_display:
+          creditNote.related_invoice.customer_name || "Unknown Customer",
+        total_amt: creditNote.related_invoice.total_amt || 0,
+        available_balance:
+          creditNote.related_invoice.available_balance ||
+          creditNote.related_invoice.total_amt ||
+          0,
+      });
     }
-  }, []);
+
+    return combined;
+  };
 
   // Fetch credit summary for a specific invoice
   const fetchInvoiceCreditSummary = useCallback(async (invoiceId) => {
@@ -131,7 +172,8 @@ const CreditNoteTable = ({
   };
 
   useEffect(() => {
-    fetchAvailableInvoices();
+    // Initial load - fetch all invoices first
+    fetchAvailableInvoices("", true);
   }, [fetchAvailableInvoices]);
 
   // Load credit summaries for linked invoices
@@ -242,6 +284,20 @@ const CreditNoteTable = ({
               [invoiceId]: summary,
             }));
           }
+
+          // Update the linked invoice in cache
+          const creditNote = creditNotes.find((cn) => cn.id === creditNoteId);
+          if (creditNote) {
+            const invoice = getCombinedInvoices(creditNote).find(
+              (inv) => inv.id === invoiceId
+            );
+            if (invoice) {
+              setLinkedInvoicesCache((prev) => ({
+                ...prev,
+                [invoiceId]: invoice,
+              }));
+            }
+          }
         } else {
           toast.error(`Failed to link invoice: ${result.error}`);
         }
@@ -274,6 +330,16 @@ const CreditNoteTable = ({
         toast.success("Invoice link removed successfully");
         if (onInvoiceLinkUpdate) {
           onInvoiceLinkUpdate();
+        }
+
+        // Remove from cache
+        const creditNote = creditNotes.find((cn) => cn.id === creditNoteId);
+        if (creditNote?.related_invoice?.id) {
+          setLinkedInvoicesCache((prev) => {
+            const newCache = { ...prev };
+            delete newCache[creditNote.related_invoice.id];
+            return newCache;
+          });
         }
       } else {
         toast.error(`Failed to remove invoice link: ${result.error}`);
@@ -360,7 +426,9 @@ const CreditNoteTable = ({
         ? `Avail: ${formatAmount(invoice.available_balance)}`
         : `Total: ${formatAmount(invoice.total_amt)}`;
 
-    return `${invoice.doc_number} - ${invoice.customer_display} (${balanceText})`;
+    return `${invoice.doc_number || `INV-${invoice.id}`} - ${
+      invoice.customer_display || invoice.customer_name || "Customer"
+    } (${balanceText})`;
   };
 
   const getInvoiceStatusBadge = (invoice) => {
@@ -382,7 +450,11 @@ const CreditNoteTable = ({
       );
     }
 
-    if (invoice.available_balance < invoice.total_amt) {
+    if (
+      invoice.available_balance !== undefined &&
+      invoice.total_amt !== undefined &&
+      invoice.available_balance < invoice.total_amt
+    ) {
       return (
         <Tooltip>
           <TooltipTrigger>
@@ -407,7 +479,7 @@ const CreditNoteTable = ({
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Full credit available: {formatAmount(invoice.total_amt)}</p>
+          <p>Full credit available: {formatAmount(invoice.total_amt || 0)}</p>
         </TooltipContent>
       </Tooltip>
     );
@@ -464,6 +536,8 @@ const CreditNoteTable = ({
   };
 
   const renderInvoiceSelector = (creditNote) => {
+    const combinedInvoices = getCombinedInvoices(creditNote);
+
     if (creditNote.related_invoice) {
       const summary = invoiceCreditSummaries[creditNote.related_invoice.id];
       const isFullyCredited = summary?.is_fully_credited || false;
@@ -472,26 +546,21 @@ const CreditNoteTable = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-              {" "}
-              {/* Added min-w-0 for proper text truncation */}
               <div className="flex items-center space-x-2 ">
                 <div className="text-xs font-medium text-gray-900 truncate">
-                  {" "}
-                  {/* Added truncate */}
-                  {creditNote.related_invoice.doc_number}
+                  {creditNote.related_invoice.doc_number ||
+                    `INV-${creditNote.related_invoice.id}`}
                 </div>
                 {getInvoiceStatusBadge(summary || creditNote.related_invoice)}
               </div>
               <div className="text-xs text-gray-500 truncate">
-                {" "}
-                {/* Added truncate */}
-                {creditNote.related_invoice.customer_display}
+                {creditNote.related_invoice.customer_name || "Customer"}
               </div>
             </div>
             <button
               onClick={() => handleRemoveInvoice(creditNote.id)}
               disabled={updatingInvoice === creditNote.id}
-              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50 flex-shrink-0" // Added flex-shrink-0
+              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50 flex-shrink-0"
               title="Remove invoice link"
             >
               <svg
@@ -533,6 +602,7 @@ const CreditNoteTable = ({
         <Select
           onValueChange={(value) => handleInvoiceChange(creditNote.id, value)}
           disabled={updatingInvoice === creditNote.id || loadingInvoices}
+          value={creditNote.related_invoice?.id || "none"}
         >
           <SelectTrigger className="w-full">
             <SelectValue
@@ -549,18 +619,22 @@ const CreditNoteTable = ({
                 <span>No invoice linked</span>
               </div>
             </SelectItem>
-            {availableInvoices.map((invoice) => (
+            {combinedInvoices.map((invoice) => (
               <SelectItem key={invoice.id} value={invoice.id}>
                 <div className="flex gap-2 items-center">
                   <div className="flex items-center gap-2 justify-between">
-                    <span className="font-medium">{invoice.doc_number}</span>
+                    <span className="font-medium">
+                      {invoice.doc_number || `INV-${invoice.id}`}
+                    </span>
                     {getInvoiceStatusBadge(invoice)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {invoice.customer_display}
+                    {invoice.customer_display ||
+                      invoice.customer_name ||
+                      "Customer"}
                   </div>
                   <div className="flex items-center justify-between text-xs gap-2">
-                    <span>Total: {formatAmount(invoice.total_amt)}</span>
+                    <span>Total: {formatAmount(invoice.total_amt || 0)}</span>
                     {invoice.available_balance !== undefined && (
                       <span className="font-medium text-blue-600">
                         Avail: {formatAmount(invoice.available_balance)}
@@ -900,7 +974,7 @@ const CreditNoteTable = ({
           isOpen={creditValidationModalOpen}
           onClose={() => setCreditValidationModalOpen(false)}
           creditNote={selectedCreditNote}
-          availableInvoices={availableInvoices}
+          availableInvoices={getCombinedInvoices(selectedCreditNote)}
           onValidate={validateCreditLinkage}
           companyInfo={companyInfo}
           onLink={handleInvoiceChange}
