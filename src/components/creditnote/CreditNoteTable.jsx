@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ChevronUpDownIcon,
   ChevronUpIcon,
@@ -52,6 +52,21 @@ const CreditNoteTable = ({
   const [invoiceCreditSummaries, setInvoiceCreditSummaries] = useState({});
   const [linkedInvoicesCache, setLinkedInvoicesCache] = useState({});
 
+  // Pagination state
+  const [invoicePagination, setInvoicePagination] = useState({
+    page: 1,
+    page_size: 20,
+    count: 0,
+    next: null,
+    previous: null,
+    total_pages: 1,
+  });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Remove the old ref and create a new one for tracking scroll positions
+  const dropdownScrollRefs = useRef(new Map());
+
   // Table headers with enhanced Linked Invoice column
   const tableHeaders = [
     { key: "doc_number", label: "Credit Note #", sortable: true },
@@ -67,19 +82,46 @@ const CreditNoteTable = ({
     { key: "actions", label: "Actions", sortable: false },
   ];
 
-  // Fetch available invoices - modified to include linked invoices
+  // Fetch available invoices with pagination
   const fetchAvailableInvoices = useCallback(
-    async (customerName = "", forceAll = false) => {
+    async (
+      customerName = "",
+      forceAll = false,
+      page = 1,
+      isLoadMore = false
+    ) => {
       try {
-        setLoadingInvoices(true);
+        if (isLoadMore) {
+          setIsLoadingMore(true);
+        } else {
+          setLoadingInvoices(true);
+        }
+
+        const offset = (page - 1) * invoicePagination.page_size;
+
         const response = await creditNoteService.getAvailableInvoices(
           "", // search term
           forceAll ? "" : customerName, // Only filter by customer if not forced
-          100 // limit
+          invoicePagination.page_size,
+          offset
         );
 
         if (response.success) {
-          setAvailableInvoices(response.invoices || []);
+          if (isLoadMore) {
+            // Append new invoices to existing list
+            setAvailableInvoices((prev) => [
+              ...prev,
+              ...(response.invoices || []),
+            ]);
+          } else {
+            // Replace with new invoices
+            setAvailableInvoices(response.invoices || []);
+          }
+
+          // Update pagination info from response
+          if (response.pagination) {
+            setInvoicePagination(response.pagination);
+          }
 
           // Cache linked invoices for dropdown display
           const cache = {};
@@ -89,45 +131,81 @@ const CreditNoteTable = ({
             }
           });
           setLinkedInvoicesCache(cache);
+
+          if (!isLoadMore) {
+            setHasSearched(true);
+          }
         }
       } catch (error) {
         console.error("Error fetching available invoices:", error);
         toast.error("Failed to load available invoices");
       } finally {
         setLoadingInvoices(false);
+        setIsLoadingMore(false);
       }
     },
-    [creditNotes]
+    [creditNotes, invoicePagination.page_size]
+  );
+
+  // Load more invoices
+  const loadMoreInvoices = useCallback(() => {
+    if (!invoicePagination.next || isLoadingMore || loadingInvoices) return;
+
+    const nextPage = invoicePagination.page + 1;
+    fetchAvailableInvoices("", true, nextPage, true);
+  }, [
+    invoicePagination,
+    isLoadingMore,
+    loadingInvoices,
+    fetchAvailableInvoices,
+  ]);
+
+  // Scroll handler for dropdown
+  const handleDropdownScroll = useCallback(
+    (event, creditNoteId) => {
+      const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+
+      // Load more when reaching bottom (with 50px buffer)
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        loadMoreInvoices();
+      }
+    },
+    [loadMoreInvoices]
   );
 
   // Get combined invoices list - always includes linked invoices
-  const getCombinedInvoices = (creditNote) => {
-    const combined = [...availableInvoices];
+  const getCombinedInvoices = useCallback(
+    (creditNote) => {
+      const combined = [...availableInvoices];
 
-    // Add linked invoice if it exists and is not already in the list
-    if (
-      creditNote.related_invoice &&
-      creditNote.related_invoice.id &&
-      !availableInvoices.find((inv) => inv.id === creditNote.related_invoice.id)
-    ) {
-      combined.push({
-        ...creditNote.related_invoice,
-        // Ensure we have all required properties
-        doc_number:
-          creditNote.related_invoice.doc_number ||
-          `INV-${creditNote.related_invoice.id}`,
-        customer_display:
-          creditNote.related_invoice.customer_name || "Unknown Customer",
-        total_amt: creditNote.related_invoice.total_amt || 0,
-        available_balance:
-          creditNote.related_invoice.available_balance ||
-          creditNote.related_invoice.total_amt ||
-          0,
-      });
-    }
+      // Add linked invoice if it exists and is not already in the list
+      if (
+        creditNote.related_invoice &&
+        creditNote.related_invoice.id &&
+        !availableInvoices.find(
+          (inv) => inv.id === creditNote.related_invoice.id
+        )
+      ) {
+        combined.push({
+          ...creditNote.related_invoice,
+          // Ensure we have all required properties
+          doc_number:
+            creditNote.related_invoice.doc_number ||
+            `INV-${creditNote.related_invoice.id}`,
+          customer_display:
+            creditNote.related_invoice.customer_name || "Unknown Customer",
+          total_amt: creditNote.related_invoice.total_amt || 0,
+          available_balance:
+            creditNote.related_invoice.available_balance ||
+            creditNote.related_invoice.total_amt ||
+            0,
+        });
+      }
 
-    return combined;
-  };
+      return combined;
+    },
+    [availableInvoices]
+  );
 
   // Fetch credit summary for a specific invoice
   const fetchInvoiceCreditSummary = useCallback(async (invoiceId) => {
@@ -171,9 +249,26 @@ const CreditNoteTable = ({
     }
   };
 
+  // Reset invoices when dropdown opens for a specific credit note
+  const handleDropdownOpen = (creditNote) => {
+    // Only reset if we haven't loaded invoices yet or if it's a different customer
+    if (!hasSearched || creditNote.customer_name) {
+      setAvailableInvoices([]);
+      setInvoicePagination({
+        page: 1,
+        page_size: 20,
+        count: 0,
+        next: null,
+        previous: null,
+        total_pages: 1,
+      });
+      fetchAvailableInvoices(creditNote.customer_name, false, 1, false);
+    }
+  };
+
   useEffect(() => {
     // Initial load - fetch all invoices first
-    fetchAvailableInvoices("", true);
+    fetchAvailableInvoices("", true, 1, false);
   }, [fetchAvailableInvoices]);
 
   // Load credit summaries for linked invoices
@@ -437,7 +532,7 @@ const CreditNoteTable = ({
     if (invoice.is_fully_credited) {
       return (
         <Tooltip>
-          <TooltipTrigger>
+          <TooltipTrigger asChild>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">
               <XCircleIcon className="w-3 h-3 mr-1" />
               Fully Credited
@@ -457,7 +552,7 @@ const CreditNoteTable = ({
     ) {
       return (
         <Tooltip>
-          <TooltipTrigger>
+          <TooltipTrigger asChild>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
               <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
               Partially Credited
@@ -472,7 +567,7 @@ const CreditNoteTable = ({
 
     return (
       <Tooltip>
-        <TooltipTrigger>
+        <TooltipTrigger asChild>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             Available
@@ -603,6 +698,11 @@ const CreditNoteTable = ({
           onValueChange={(value) => handleInvoiceChange(creditNote.id, value)}
           disabled={updatingInvoice === creditNote.id || loadingInvoices}
           value={creditNote.related_invoice?.id || "none"}
+          onOpenChange={(open) => {
+            if (open) {
+              handleDropdownOpen(creditNote);
+            }
+          }}
         >
           <SelectTrigger className="w-full">
             <SelectValue
@@ -614,36 +714,93 @@ const CreditNoteTable = ({
             />
           </SelectTrigger>
           <SelectContent className="max-h-96">
-            <SelectItem value="none">
-              <div className="flex items-center">
-                <span>No invoice linked</span>
-              </div>
-            </SelectItem>
-            {combinedInvoices.map((invoice) => (
-              <SelectItem key={invoice.id} value={invoice.id}>
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center gap-2 justify-between">
-                    <span className="font-medium">
-                      {invoice.doc_number || `INV-${invoice.id}`}
-                    </span>
-                    {getInvoiceStatusBadge(invoice)}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {invoice.customer_display ||
-                      invoice.customer_name ||
-                      "Customer"}
-                  </div>
-                  <div className="flex items-center justify-between text-xs gap-2">
-                    <span>Total: {formatAmount(invoice.total_amt || 0)}</span>
-                    {invoice.available_balance !== undefined && (
-                      <span className="font-medium text-blue-600">
-                        Avail: {formatAmount(invoice.available_balance)}
-                      </span>
-                    )}
-                  </div>
+            {/* Scrollable wrapper div */}
+            <div
+              className="max-h-96 overflow-auto"
+              onScroll={(e) => handleDropdownScroll(e, creditNote.id)}
+            >
+              <SelectItem value="none">
+                <div className="flex items-center py-2">
+                  <span>No invoice linked</span>
                 </div>
               </SelectItem>
-            ))}
+
+              {combinedInvoices.length === 0 && !loadingInvoices && (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  No invoices available for linking
+                </div>
+              )}
+
+              {combinedInvoices.map((invoice) => (
+                <SelectItem
+                  key={invoice.id}
+                  value={invoice.id}
+                  className="py-2"
+                >
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">
+                        {invoice.doc_number || `INV-${invoice.id}`}
+                      </span>
+                      {getInvoiceStatusBadge(invoice)}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {invoice.customer_display ||
+                        invoice.customer_name ||
+                        "Customer"}
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span>Total: {formatAmount(invoice.total_amt || 0)}</span>
+                      {invoice.available_balance !== undefined && (
+                        <span className="font-medium text-blue-600">
+                          Avail: {formatAmount(invoice.available_balance)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+
+              {/* Loading indicator for initial load */}
+              {loadingInvoices && !isLoadingMore && (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-500">
+                    Loading invoices...
+                  </span>
+                </div>
+              )}
+
+              {/* Loading indicator for pagination */}
+              {isLoadingMore && (
+                <div className="flex items-center justify-center py-3">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-xs text-gray-500">
+                    Loading more invoices...
+                  </span>
+                </div>
+              )}
+
+              {/* Pagination info */}
+              {combinedInvoices.length > 0 &&
+                invoicePagination.total_pages > 1 && (
+                  <div className="border-t pt-2 mt-1">
+                    <div className="text-xs text-gray-500 px-2 text-center">
+                      Showing {combinedInvoices.length} of{" "}
+                      {invoicePagination.count} invoices
+                      <div className="mt-1">
+                        Page {invoicePagination.page} of{" "}
+                        {invoicePagination.total_pages}
+                      </div>
+                    </div>
+                    {!isLoadingMore && invoicePagination.next && (
+                      <div className="text-xs text-blue-600 text-center mt-1">
+                        Scroll down to load more
+                      </div>
+                    )}
+                  </div>
+                )}
+            </div>
           </SelectContent>
         </Select>
 

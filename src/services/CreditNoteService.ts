@@ -142,15 +142,25 @@ interface CustomerAnalysisResponse {
   error?: string;
 }
 
-interface AvailableInvoicesResponse {
+export interface AvailableInvoicesResponse {
   success: boolean;
   invoices: InvoiceForDropdown[];
-  count: number;
-  summary?: any;
-  pagination?: {
-    limit: number;
-    offset: number;
-    has_more: boolean;
+  pagination: {
+    count: number;
+    page: number;
+    page_size: number;
+    next: string | null;
+    previous: string | null;
+    total_pages: number;
+  };
+  summary?: {
+    total_invoices: number;
+    invoices_with_credits: number;
+    invoices_without_credits: number;
+    fully_credited_invoices: number;
+    total_invoice_amount: number;
+    total_credits_applied: number;
+    credit_utilization_percentage: number;
   };
 }
 
@@ -508,8 +518,8 @@ class CreditNoteService {
   async getAvailableInvoices(
     search?: string,
     customerName?: string,
-    limit?: number,
-    offset?: number,
+    limit: number = 20,
+    offset: number = 0,
     min_balance?: number
   ): Promise<AvailableInvoicesResponse> {
     const params: any = {};
