@@ -518,19 +518,21 @@ class CreditNoteService {
   async getAvailableInvoices(
     search?: string,
     customerName?: string,
-    limit: number = 20,
-    offset: number = 0,
+    pageSize: number = 20,
+    page: number = 1,
     min_balance?: number
   ): Promise<AvailableInvoicesResponse> {
     const params: any = {};
     if (search) params.search = search;
     if (customerName) params.customer_name = customerName;
-    if (limit) params.limit = limit;
-    if (offset) params.offset = offset;
+    if (pageSize) params.page_size = pageSize;
+    if (page) params.page = page;
     if (min_balance !== undefined) params.min_balance = min_balance;
 
     const queryString = this.buildQueryString(params);
     const url = `${this.baseURL}/credit-notes/available-invoices/?${queryString}`;
+
+    console.log("Fetching invoices with URL:", url); // Debug log
 
     return this.handleRequest<AvailableInvoicesResponse>(url);
   }

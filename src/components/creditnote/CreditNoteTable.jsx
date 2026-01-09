@@ -97,25 +97,25 @@ const CreditNoteTable = ({
           setLoadingInvoices(true);
         }
 
-        const offset = (page - 1) * invoicePagination.page_size;
-
         const response = await creditNoteService.getAvailableInvoices(
           "", // search term
-          forceAll ? "" : customerName, // Only filter by customer if not forced
-          invoicePagination.page_size,
-          offset
+          forceAll ? "" : customerName, // customer name
+          invoicePagination.page_size, // pageSize (was limit)
+          page, // page (not offset)
+          undefined // min_balance
         );
 
+        console.log("Fetched invoices response:", response); // Debug log
+
         if (response.success) {
+          const newInvoices = response.invoices || [];
+
           if (isLoadMore) {
             // Append new invoices to existing list
-            setAvailableInvoices((prev) => [
-              ...prev,
-              ...(response.invoices || []),
-            ]);
+            setAvailableInvoices((prev) => [...prev, ...newInvoices]);
           } else {
             // Replace with new invoices
-            setAvailableInvoices(response.invoices || []);
+            setAvailableInvoices(newInvoices);
           }
 
           // Update pagination info from response
@@ -194,6 +194,8 @@ const CreditNoteTable = ({
             `INV-${creditNote.related_invoice.id}`,
           customer_display:
             creditNote.related_invoice.customer_name || "Unknown Customer",
+          customer_name:
+            creditNote.related_invoice.customer_name || "Unknown Customer",
           total_amt: creditNote.related_invoice.total_amt || 0,
           available_balance:
             creditNote.related_invoice.available_balance ||
@@ -251,23 +253,26 @@ const CreditNoteTable = ({
 
   // Reset invoices when dropdown opens for a specific credit note
   const handleDropdownOpen = (creditNote) => {
-    // Only reset if we haven't loaded invoices yet or if it's a different customer
-    if (!hasSearched || creditNote.customer_name) {
-      setAvailableInvoices([]);
-      setInvoicePagination({
-        page: 1,
-        page_size: 20,
-        count: 0,
-        next: null,
-        previous: null,
-        total_pages: 1,
-      });
-      fetchAvailableInvoices(creditNote.customer_name, false, 1, false);
-    }
+    console.log("Dropdown opened for credit note:", creditNote);
+
+    // Reset invoices list
+    setAvailableInvoices([]);
+    setInvoicePagination({
+      page: 1,
+      page_size: 20,
+      count: 0,
+      next: null,
+      previous: null,
+      total_pages: 1,
+    });
+
+    // Fetch with customer filter if available
+    const customerName = creditNote.customer_name || "";
+    fetchAvailableInvoices(customerName, customerName === "", 1, false);
   };
 
+  // Initial load - fetch all invoices
   useEffect(() => {
-    // Initial load - fetch all invoices first
     fetchAvailableInvoices("", true, 1, false);
   }, [fetchAvailableInvoices]);
 
@@ -292,6 +297,12 @@ const CreditNoteTable = ({
       loadCreditSummaries();
     }
   }, [creditNotes, fetchInvoiceCreditSummary]);
+
+  // Debug log to check available invoices
+  useEffect(() => {
+    console.log("Available invoices state:", availableInvoices);
+    console.log("Invoice pagination state:", invoicePagination);
+  }, [availableInvoices, invoicePagination]);
 
   const handleValidateClick = (creditNote) => {
     console.log("Selected Credit Note:", creditNote);
@@ -633,6 +644,10 @@ const CreditNoteTable = ({
   const renderInvoiceSelector = (creditNote) => {
     const combinedInvoices = getCombinedInvoices(creditNote);
 
+    console.log("Rendering invoice selector for credit note:", creditNote.id);
+    console.log("Combined invoices:", combinedInvoices);
+    console.log("Available invoices state:", availableInvoices);
+
     if (creditNote.related_invoice) {
       const summary = invoiceCreditSummaries[creditNote.related_invoice.id];
       const isFullyCredited = summary?.is_fully_credited || false;
@@ -700,6 +715,7 @@ const CreditNoteTable = ({
           value={creditNote.related_invoice?.id || "none"}
           onOpenChange={(open) => {
             if (open) {
+              console.log("Dropdown opening, calling handleDropdownOpen");
               handleDropdownOpen(creditNote);
             }
           }}
