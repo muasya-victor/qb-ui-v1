@@ -142,7 +142,7 @@ interface CustomerAnalysisResponse {
   error?: string;
 }
 
-export interface AvailableInvoicesResponse {
+interface AvailableInvoicesResponse {
   success: boolean;
   invoices: InvoiceForDropdown[];
   pagination: {
