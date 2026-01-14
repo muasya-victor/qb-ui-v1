@@ -542,6 +542,8 @@ class CreditNoteService {
     creditNoteId: string,
     invoiceId: string | null
   ): Promise<UpdateInvoiceResponse> {
+    console.log("checking data");
+
     if (invoiceId === null) {
       const url = `${this.baseURL}/credit-notes/${creditNoteId}/remove-related-invoice/`;
       return this.handleRequest<UpdateInvoiceResponse>(url, {

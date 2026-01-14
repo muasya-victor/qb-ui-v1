@@ -6,6 +6,9 @@ import LinkedInvoiceInfo from "./LinkedInvoiceInfo";
 import { formatAmount, formatDate } from "@/utils/formatters";
 import { Button } from "../../ui/button";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import creditNoteService from "@/services/CreditNoteService";
+import { toast } from "@/lib/toast";
+
 
 const CreditNoteTableRow = ({
   creditNote,
@@ -25,7 +28,8 @@ const CreditNoteTableRow = ({
   onViewCreditNote,
   onViewSubmissionDetails,
 }) => {
-  const [updatingInvoice, setUpdatingInvoice] = useState(null);
+  const [updatingInvoice, setUpdatingInvoice, updateRelatedInvoice] =
+    useState(null);
 
   const getKRAStatus = () => creditNote.kra_submission?.status || "pending";
   const getKRACreditNoteNumber = () =>
@@ -47,7 +51,31 @@ const CreditNoteTableRow = ({
   };
 
   const handleInvoiceUpdate = async (invoiceId) => {
+    console.log("workkkk", invoiceId);
+
     onInvoiceChange(creditNote.id, invoiceId);
+  };
+
+  const handleInvoiceChange = async (invoiceId) => {
+    let creditNoteId = creditNote.id;
+    try {
+      console.log("🔄 Starting invoice change:", { creditNoteId, invoiceId });
+      console.log("📞 Calling updateRelatedInvoice...");
+
+      setUpdatingInvoice(creditNoteId);
+
+      const result = await creditNoteService.updateRelatedInvoice(
+        creditNoteId,
+        invoiceId
+      );
+    } catch (error) {
+      console.error("💥 Error in handleInvoiceChange:", error);
+      toast.error(
+        `Failed to link invoice: ${error.message || "Please try again"}`
+      );
+    } finally {
+      setUpdatingInvoice(null);
+    }
   };
 
   return (
@@ -85,7 +113,7 @@ const CreditNoteTableRow = ({
             updatingInvoice={updatingInvoice}
             onDropdownOpen={onDropdownOpen}
             onDropdownScroll={onDropdownScroll}
-            onInvoiceChange={handleInvoiceUpdate}
+            onInvoiceChange={handleInvoiceChange}
           />
 
           <Button

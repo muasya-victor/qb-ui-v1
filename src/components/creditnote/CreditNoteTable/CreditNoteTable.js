@@ -238,10 +238,10 @@ const CreditNoteTable = ({
                     invoicePagination={invoicePagination}
                     invoiceCreditSummaries={invoiceCreditSummaries}
                     linkedInvoicesCache={linkedInvoicesCache}
-                    onDropdownOpen={fetchAvailableInvoices}
+                    // onDropdownOpen={fetchAvailableInvoices}
                     onDropdownScroll={handleDropdownScroll}
                     onDropdownOpen={handleDropdownOpen}
-                    onInvoiceChange={() => {}} // Will be handled in child
+                    onInvoiceChange={() => {}} 
                     onValidateClick={handleValidateClick}
                     onValidateCreditLinkage={handleValidateCreditLinkage}
                     onViewCreditNote={onViewCreditNote}
