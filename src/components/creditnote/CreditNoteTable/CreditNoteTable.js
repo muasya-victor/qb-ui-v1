@@ -119,19 +119,32 @@ const CreditNoteTable = ({
 
     // Fetch with customer filter if available, and search term
     const customerName = creditNote.customer_name || "";
+    // fetchAvailableInvoices(
+    //   searchTerm,
+    //   customerName,
+    //   customerName === "",
+    //   1,
+    //   false
+    // );
     fetchAvailableInvoices(
-      searchTerm,
+      searchTerm, 
       customerName,
-      customerName === "",
-      1,
-      false
+      forceAll, 
+      1, 
+      false 
     );
   };
 
   const loadMoreInvoices = useCallback(() => {
     if (!invoicePagination.next || isLoadingMore || loadingInvoices) return;
     const nextPage = invoicePagination.page + 1;
-    fetchAvailableInvoices("", true, nextPage, true);
+    fetchAvailableInvoices(
+      "", // 1st: search term (empty for load more)
+      "", // 2nd: customer name (empty for load more)
+      true, // 3rd: forceAll (true to get all invoices)
+      nextPage, // 4th: page (next page number)
+      true // 5th: isLoadMore (true)
+    );
   }, [
     invoicePagination,
     isLoadingMore,
@@ -163,7 +176,14 @@ const CreditNoteTable = ({
   }, []);
 
   useEffect(() => {
-    fetchAvailableInvoices("", true, 1, false);
+    // fetchAvailableInvoices("", true, 1, false);
+    fetchAvailableInvoices(
+      "", // 1st: search term
+      "", // 2nd: customer name
+      true, // 3rd: forceAll (true to get all invoices initially)
+      1, // 4th: page (NUMBER 1)
+      false // 5th: isLoadMore
+    );
   }, [fetchAvailableInvoices]);
 
   useEffect(() => {
