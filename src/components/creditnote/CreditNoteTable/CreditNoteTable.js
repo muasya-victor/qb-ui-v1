@@ -50,14 +50,14 @@ const CreditNoteTable = ({
 
       try {
         console.log("🔄 Starting invoice change:", { creditNoteId, invoiceId });
-        setUpdatingInvoice(creditNoteId);
+        setUpdatingInvoice(invoiceId);
 
         // If selecting "none", remove the invoice link
         if (invoiceId === "none") {
           console.log("🗑️ Removing invoice link...");
           const result = await creditNoteService.updateRelatedInvoice(
             creditNoteId,
-            null,
+            invoiceId,
           );
 
           console.log("✅ Remove result:", result);
@@ -75,69 +75,69 @@ const CreditNoteTable = ({
         }
 
         // Validate before linking
-        console.log("✅ Validating credit linkage...");
-        const creditNote = creditNotes.find((cn) => cn.id === creditNoteId);
-        if (!creditNote) {
-          throw new Error("Credit note not found");
-        }
+        // console.log("✅ Validating credit linkage...");
+        // const creditNote = creditNotes.find((cn) => cn.id === creditNoteId);
+        // if (!creditNote) {
+        //   throw new Error("Credit note not found");
+        // }
 
-        const validation = await creditNoteService.validateCreditLinkage(
-          invoiceId,
-          creditNote.total_amt,
-        );
-        console.log("📊 Validation result:", validation);
+        // const validation = await creditNoteService.validateCreditLinkage(
+        //   invoiceId,
+        //   creditNote.total_amt,
+        // );
+        // console.log("📊 Validation result:", validation);
 
-        if (validation.success && validation.validation.valid) {
-          // Proceed with linking
-          console.log("🔗 Linking invoice...");
-          const result = await creditNoteService.updateRelatedInvoice(
-            creditNoteId,
-            invoiceId,
-          );
+        // if (validation.success && validation.validation.valid) {
+        //   // Proceed with linking
+        //   console.log("🔗 Linking invoice...");
+        //   const result = await creditNoteService.updateRelatedInvoice(
+        //     creditNoteId,
+        //     invoiceId,
+        //   );
 
-          console.log("✅ Link result:", result);
+        //   console.log("✅ Link result:", result);
 
-          if (result.success) {
-            toast.success("Invoice linked successfully");
-            if (onInvoiceLinkUpdate) {
-              onInvoiceLinkUpdate();
-            }
+        //   if (result.success) {
+        //     toast.success("Invoice linked successfully");
+        //     if (onInvoiceLinkUpdate) {
+        //       onInvoiceLinkUpdate();
+        //     }
 
-            // Refresh the invoice credit summary
-            const summary = await fetchInvoiceCreditSummary(invoiceId);
-            if (summary) {
-              setInvoiceCreditSummaries((prev) => ({
-                ...prev,
-                [invoiceId]: summary,
-              }));
-            }
+        //     // Refresh the invoice credit summary
+        //     const summary = await fetchInvoiceCreditSummary(invoiceId);
+        //     if (summary) {
+        //       setInvoiceCreditSummaries((prev) => ({
+        //         ...prev,
+        //         [invoiceId]: summary,
+        //       }));
+        //     }
 
-            // Update the linked invoice in cache
-            if (creditNote) {
-              const invoice = availableInvoices.find(
-                (inv) => inv.id === invoiceId,
-              );
-              if (invoice) {
-                setLinkedInvoicesCache((prev) => ({
-                  ...prev,
-                  [invoiceId]: invoice,
-                }));
-              }
-            }
+        //     // Update the linked invoice in cache
+        //     if (creditNote) {
+        //       const invoice = availableInvoices.find(
+        //         (inv) => inv.id === invoiceId,
+        //       );
+        //       if (invoice) {
+        //         setLinkedInvoicesCache((prev) => ({
+        //           ...prev,
+        //           [invoiceId]: invoice,
+        //         }));
+        //       }
+        //     }
 
-            window.location.reload();
-          } else {
-            console.error("❌ Link failed:", result.error);
-            toast.error(`Failed to link invoice: ${result.error}`);
-          }
-        } else {
-          console.error("❌ Validation failed:", validation);
-          toast.error(
-            `Cannot link: ${
-              validation.validation.error || validation.validation.message
-            }`,
-          );
-        }
+        //     window.location.reload();
+        //   } else {
+        //     console.error("❌ Link failed:", result.error);
+        //     toast.error(`Failed to link invoice: ${result.error}`);
+        //   }
+        // } else {
+        //   console.error("❌ Validation failed:", validation);
+        //   toast.error(
+        //     `Cannot link: ${
+        //       validation.validation.error || validation.validation.message
+        //     }`,
+        //   );
+        // }
       } catch (error) {
         console.error("💥 Error in handleInvoiceChange:", error);
         toast.error(

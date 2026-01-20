@@ -9,7 +9,6 @@ import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import creditNoteService from "@/services/CreditNoteService";
 import { toast } from "@/lib/toast";
 
-
 const CreditNoteTableRow = ({
   creditNote,
   index,
@@ -50,12 +49,6 @@ const CreditNoteTableRow = ({
     return "Validate KRA";
   };
 
-  const handleInvoiceUpdate = async (invoiceId) => {
-    console.log("workkkk", invoiceId);
-
-    onInvoiceChange(creditNote.id, invoiceId);
-  };
-
   const handleInvoiceChange = async (invoiceId) => {
     let creditNoteId = creditNote.id;
     try {
@@ -64,14 +57,15 @@ const CreditNoteTableRow = ({
 
       setUpdatingInvoice(creditNoteId);
 
-      const result = await creditNoteService.updateRelatedInvoice(
-        creditNoteId,
-        invoiceId
-      );
+      const result = await creditNoteService
+        .updateRelatedInvoice(creditNoteId, invoiceId)
+        .then(() => {
+          window.location.reload();
+        });
     } catch (error) {
       console.error("💥 Error in handleInvoiceChange:", error);
       toast.error(
-        `Failed to link invoice: ${error.message || "Please try again"}`
+        `Failed to link invoice: ${error.message || "Please try again"}`,
       );
     } finally {
       setUpdatingInvoice(null);

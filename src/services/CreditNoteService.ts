@@ -312,7 +312,7 @@ class CreditNoteService {
 
   private async handleRequest<T>(
     url: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     try {
       const defaultOptions: RequestInit = {
@@ -331,7 +331,7 @@ class CreditNoteService {
           errorData.error ||
             errorData.detail ||
             errorData.message ||
-            `HTTP error! status: ${response.status}`
+            `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -345,7 +345,7 @@ class CreditNoteService {
   // ================ EXISTING METHODS (UPDATED WHERE NEEDED) ================
 
   async getCreditNotes(
-    params: CreditNoteQueryParams = {}
+    params: CreditNoteQueryParams = {},
   ): Promise<CreditNotesResponse> {
     const queryString = this.buildQueryString(params);
     const url = `${this.baseURL}/credit-notes/${
@@ -355,7 +355,7 @@ class CreditNoteService {
   }
 
   async getAllCreditNotes(
-    progressCallback?: (message: string) => void
+    progressCallback?: (message: string) => void,
   ): Promise<CreditNotesResponse> {
     try {
       let allCreditNotes: CreditNote[] = [];
@@ -376,7 +376,7 @@ class CreditNoteService {
         updateProgress(
           `Fetching page ${currentPage}${
             totalPages > 1 ? ` of ${totalPages}` : ""
-          }...`
+          }...`,
         );
 
         const response = await this.getCreditNotes({
@@ -399,18 +399,18 @@ class CreditNoteService {
           currentPage = response.pagination.current_page + 1;
 
           updateProgress(
-            `Loaded ${allCreditNotes.length} credit notes so far (page ${response.pagination.current_page} of ${totalPages})`
+            `Loaded ${allCreditNotes.length} credit notes so far (page ${response.pagination.current_page} of ${totalPages})`,
           );
         } else {
           updateProgress(
-            `Loaded ${allCreditNotes.length} credit notes (no pagination)`
+            `Loaded ${allCreditNotes.length} credit notes (no pagination)`,
           );
           break;
         }
       }
 
       updateProgress(
-        `✅ Successfully fetched all ${allCreditNotes.length} credit notes from QuickBooks`
+        `✅ Successfully fetched all ${allCreditNotes.length} credit notes from QuickBooks`,
       );
 
       return {
@@ -433,11 +433,11 @@ class CreditNoteService {
   }
 
   async getCreditNote(
-    creditNoteId: string
+    creditNoteId: string,
   ): Promise<{ success: boolean; credit_note: CreditNote }> {
     const url = `${this.baseURL}/credit-notes/${creditNoteId}/`;
     return this.handleRequest<{ success: boolean; credit_note: CreditNote }>(
-      url
+      url,
     );
   }
 
@@ -473,13 +473,13 @@ class CreditNoteService {
           method: "GET",
           headers: this.getAuthHeaders(),
           credentials: "include",
-        }
+        },
       );
 
       if (!response.ok) {
         if (response.status === 404 || response.status === 500) {
           console.warn(
-            "Analyze customer links endpoint not available, calculating locally"
+            "Analyze customer links endpoint not available, calculating locally",
           );
           return this.analyzeCustomerLinksLocally();
         }
@@ -491,7 +491,7 @@ class CreditNoteService {
     } catch (error) {
       console.error(
         "Error analyzing customer links, falling back to local calculation:",
-        error
+        error,
       );
       return this.analyzeCustomerLinksLocally();
     }
@@ -520,7 +520,7 @@ class CreditNoteService {
     customerName?: string,
     pageSize: number = 20,
     page: number = 1,
-    min_balance?: number
+    min_balance?: number,
   ): Promise<AvailableInvoicesResponse> {
     const params: any = {};
     if (search) params.search = search;
@@ -540,9 +540,13 @@ class CreditNoteService {
   // ================ UPDATED UPDATE RELATED INVOICE METHOD ================
   async updateRelatedInvoice(
     creditNoteId: string,
-    invoiceId: string | null
+    invoiceId: string | null,
   ): Promise<UpdateInvoiceResponse> {
-    console.log("checking data");
+    console.log(
+      "checking data ----------------------\n---------------------\n||||||||||||||",
+    );
+    console.log(creditNoteId, "credit not");
+    console.log(invoiceId, "invoiceId");
 
     if (invoiceId === null) {
       const url = `${this.baseURL}/credit-notes/${creditNoteId}/remove-related-invoice/`;
@@ -598,7 +602,7 @@ class CreditNoteService {
       const totalCreditNotes = creditNotes.length;
 
       const creditNotesWithCustomers = creditNotes.filter(
-        (cn) => cn.customer_name && cn.customer_name !== "Unknown Customer"
+        (cn) => cn.customer_name && cn.customer_name !== "Unknown Customer",
       ).length;
 
       const creditNotesWithStubCustomers = creditNotes.filter(
@@ -606,11 +610,11 @@ class CreditNoteService {
           cn.customer_name &&
           (cn.customer_name.startsWith("Customer ") ||
             cn.customer_name.includes("Stub") ||
-            !cn.customer_name.trim())
+            !cn.customer_name.trim()),
       ).length;
 
       const creditNotesWithLinkedInvoices = creditNotes.filter(
-        (cn) => cn.related_invoice && cn.related_invoice.id
+        (cn) => cn.related_invoice && cn.related_invoice.id,
       ).length;
 
       return {
@@ -655,7 +659,7 @@ class CreditNoteService {
   }
 
   async validateCreditNoteToKRA(
-    creditNoteId: string
+    creditNoteId: string,
   ): Promise<KRAValidationResponse> {
     const url = `${this.baseURL}/credit-notes/${creditNoteId}/submit_to_kra/`;
     return this.handleRequest<KRAValidationResponse>(url, {
@@ -673,8 +677,8 @@ class CreditNoteService {
     progressCallback?: (
       progress: number,
       current: string,
-      success: boolean
-    ) => void
+      success: boolean,
+    ) => void,
   ): Promise<{
     success: number;
     failed: number;
@@ -682,7 +686,7 @@ class CreditNoteService {
   }> {
     try {
       console.log(
-        `Starting bulk KRA validation for ${creditNoteIds.length} credit notes...`
+        `Starting bulk KRA validation for ${creditNoteIds.length} credit notes...`,
       );
 
       const results = [];
@@ -697,7 +701,7 @@ class CreditNoteService {
             progressCallback(
               Math.round((i / creditNoteIds.length) * 100),
               creditNoteId,
-              false
+              false,
             );
           }
 
@@ -720,7 +724,7 @@ class CreditNoteService {
             progressCallback(
               Math.round(((i + 1) / creditNoteIds.length) * 100),
               creditNoteId,
-              result.success
+              result.success,
             );
           }
 
@@ -733,14 +737,14 @@ class CreditNoteService {
             progressCallback(
               Math.round(((i + 1) / creditNoteIds.length) * 100),
               creditNoteId,
-              false
+              false,
             );
           }
         }
       }
 
       console.log(
-        `Bulk KRA validation completed: ${successCount} successful, ${failedCount} failed`
+        `Bulk KRA validation completed: ${successCount} successful, ${failedCount} failed`,
       );
 
       return {
@@ -761,7 +765,7 @@ class CreditNoteService {
    */
   async validateCreditLinkage(
     invoiceId: string,
-    creditAmount: number
+    creditAmount: number,
   ): Promise<CreditValidationResponse> {
     const url = `${this.baseURL}/credit-notes/validate-credit/`;
     return this.handleRequest<CreditValidationResponse>(url, {
@@ -777,7 +781,7 @@ class CreditNoteService {
    * Validate if the current credit note can be linked to its invoice
    */
   async validateCurrentCreditNoteLinkage(
-    creditNoteId: string
+    creditNoteId: string,
   ): Promise<CreditValidationResponse> {
     const url = `${this.baseURL}/credit-notes/${creditNoteId}/validate-current/`;
     return this.handleRequest<CreditValidationResponse>(url);
@@ -787,7 +791,7 @@ class CreditNoteService {
    * Get detailed credit summary for a specific invoice
    */
   async getInvoiceCreditSummary(
-    invoiceId: string
+    invoiceId: string,
   ): Promise<InvoiceCreditSummary> {
     const url = `${this.baseURL}/credit-notes/invoice-credit-summary/${invoiceId}/`;
     return this.handleRequest<InvoiceCreditSummary>(url);
@@ -798,7 +802,7 @@ class CreditNoteService {
    */
   async getFullyCreditedInvoices(
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<FullyCreditedInvoicesResponse> {
     const params = {
       limit,
@@ -840,7 +844,7 @@ class CreditNoteService {
    */
   async preValidateCreditNote(
     creditNote: CreditNote,
-    targetInvoiceId?: string
+    targetInvoiceId?: string,
   ): Promise<CreditValidationResult> {
     const invoiceId = targetInvoiceId || creditNote.related_invoice?.id;
 
@@ -854,7 +858,7 @@ class CreditNoteService {
     try {
       const response = await this.validateCreditLinkage(
         invoiceId,
-        creditNote.total_amt
+        creditNote.total_amt,
       );
 
       if (response.success) {
@@ -897,22 +901,22 @@ class CreditNoteService {
 
       // Calculate summary
       const invoicesWithCredits = invoices.filter(
-        (inv) => (inv.available_balance || inv.total_amt) < inv.total_amt
+        (inv) => (inv.available_balance || inv.total_amt) < inv.total_amt,
       ).length;
 
       const fullyCreditedInvoices = invoices.filter(
-        (inv) => inv.is_fully_credited === true
+        (inv) => inv.is_fully_credited === true,
       ).length;
 
       const totalInvoiceAmount = invoices.reduce(
         (sum, inv) => sum + inv.total_amt,
-        0
+        0,
       );
 
       const totalCreditsApplied = invoices.reduce(
         (sum, inv) =>
           sum + (inv.total_amt - (inv.available_balance || inv.total_amt)),
-        0
+        0,
       );
 
       const creditUtilizationPercentage =
@@ -953,7 +957,7 @@ class CreditNoteService {
       excludeFullyCredited?: boolean;
       limit?: number;
       offset?: number;
-    } = {}
+    } = {},
   ): Promise<AvailableInvoicesResponse> {
     const {
       search = "",
@@ -970,7 +974,7 @@ class CreditNoteService {
       customerName,
       limit,
       offset,
-      minAvailableBalance
+      minAvailableBalance,
     );
   }
 
@@ -979,7 +983,7 @@ class CreditNoteService {
    */
   async canLinkToInvoice(
     creditNoteId: string,
-    invoiceId: string
+    invoiceId: string,
   ): Promise<{ canLink: boolean; reason?: string; availableBalance?: number }> {
     try {
       const creditNote = await this.getCreditNote(creditNoteId);
@@ -989,7 +993,7 @@ class CreditNoteService {
 
       const validation = await this.validateCreditLinkage(
         invoiceId,
-        creditNote.credit_note.total_amt
+        creditNote.credit_note.total_amt,
       );
 
       return {
@@ -1007,7 +1011,7 @@ class CreditNoteService {
    */
   async batchValidateCreditNotes(
     creditNoteIds: string[],
-    targetInvoiceId: string
+    targetInvoiceId: string,
   ): Promise<
     Array<{
       creditNoteId: string;
@@ -1022,7 +1026,7 @@ class CreditNoteService {
       try {
         const result = await this.canLinkToInvoice(
           creditNoteId,
-          targetInvoiceId
+          targetInvoiceId,
         );
         results.push({
           creditNoteId,

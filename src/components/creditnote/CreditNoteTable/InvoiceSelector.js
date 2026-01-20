@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -18,6 +18,8 @@ import {
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { formatAmount } from "@/utils/formatters";
+import creditNoteService from "@/services/CreditNoteService";
+
 
 const InvoiceSelector = ({
   creditNote,
@@ -33,6 +35,24 @@ const InvoiceSelector = ({
 }) => {
   const [searchInput, setSearchInput] = useState("");
   const [debounceTimer, setDebounceTimer] = useState(null);
+
+  const removeInvoice = async (creditNoteId, invoiceId) => {
+    console.log('attempting change');
+    console.log("🗑️ Removing invoice link...");
+    const result = await creditNoteService
+      .updateRelatedInvoice(creditNoteId, null)
+      .then((resp) => {
+        toast.success("Invoice link removed successfully");
+      })
+      .catch((err) => {
+        toast.error(`Failed to remove invoice link: ${result.error}`);
+      })
+      .finally(() => {
+        window.location.reload();
+      });
+
+    return;
+    }
 
   const getCombinedInvoices = () => {
     const combined = [...availableInvoices];
@@ -135,7 +155,10 @@ const InvoiceSelector = ({
   };
 
   const handleRemoveInvoice = (invoice) => {
-    onInvoiceChange(creditNote.id, invoice.id);
+    console.log("related in", invoice.id);
+
+    // onInvoiceChange(creditNote.id, invoice.id);
+    removeInvoice(creditNote.id);
   };
 
   if (creditNote.related_invoice) {
@@ -155,7 +178,9 @@ const InvoiceSelector = ({
             </div>
           </div>
           <button
-            onClick={handleRemoveInvoice}
+            onClick={() => {
+              handleRemoveInvoice(creditNote.related_invoice);
+            }}
             disabled={updatingInvoice === creditNote.id}
             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors disabled:opacity-50 flex-shrink-0"
             title="Remove invoice link"
