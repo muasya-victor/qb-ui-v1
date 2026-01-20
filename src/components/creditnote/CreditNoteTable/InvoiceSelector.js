@@ -135,7 +135,7 @@ const InvoiceSelector = ({
   };
 
   const handleRemoveInvoice = (invoice) => {
-    onInvoiceChange(invoice.id);
+    onInvoiceChange(creditNote.id, invoice.id);
   };
 
   if (creditNote.related_invoice) {
