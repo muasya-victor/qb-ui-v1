@@ -46,6 +46,8 @@ const CreditNoteTable = ({
   // Add handleInvoiceChange function
   const handleInvoiceChange = useCallback(
     async (creditNoteId, invoiceId) => {
+      console.log("test");
+
       try {
         console.log("🔄 Starting invoice change:", { creditNoteId, invoiceId });
         setUpdatingInvoice(creditNoteId);
@@ -55,7 +57,7 @@ const CreditNoteTable = ({
           console.log("🗑️ Removing invoice link...");
           const result = await creditNoteService.updateRelatedInvoice(
             creditNoteId,
-            null
+            null,
           );
 
           console.log("✅ Remove result:", result);
@@ -81,7 +83,7 @@ const CreditNoteTable = ({
 
         const validation = await creditNoteService.validateCreditLinkage(
           invoiceId,
-          creditNote.total_amt
+          creditNote.total_amt,
         );
         console.log("📊 Validation result:", validation);
 
@@ -90,7 +92,7 @@ const CreditNoteTable = ({
           console.log("🔗 Linking invoice...");
           const result = await creditNoteService.updateRelatedInvoice(
             creditNoteId,
-            invoiceId
+            invoiceId,
           );
 
           console.log("✅ Link result:", result);
@@ -113,7 +115,7 @@ const CreditNoteTable = ({
             // Update the linked invoice in cache
             if (creditNote) {
               const invoice = availableInvoices.find(
-                (inv) => inv.id === invoiceId
+                (inv) => inv.id === invoiceId,
               );
               if (invoice) {
                 setLinkedInvoicesCache((prev) => ({
@@ -122,6 +124,8 @@ const CreditNoteTable = ({
                 }));
               }
             }
+
+            window.location.reload();
           } else {
             console.error("❌ Link failed:", result.error);
             toast.error(`Failed to link invoice: ${result.error}`);
@@ -131,19 +135,19 @@ const CreditNoteTable = ({
           toast.error(
             `Cannot link: ${
               validation.validation.error || validation.validation.message
-            }`
+            }`,
           );
         }
       } catch (error) {
         console.error("💥 Error in handleInvoiceChange:", error);
         toast.error(
-          `Failed to link invoice: ${error.message || "Please try again"}`
+          `Failed to link invoice: ${error.message || "Please try again"}`,
         );
       } finally {
         setUpdatingInvoice(null);
       }
     },
-    [creditNotes, availableInvoices, onInvoiceLinkUpdate]
+    [creditNotes, availableInvoices, onInvoiceLinkUpdate],
   );
 
   const fetchAvailableInvoices = useCallback(
@@ -152,7 +156,7 @@ const CreditNoteTable = ({
       customerName = "",
       forceAll = false,
       page = 1,
-      isLoadMore = false
+      isLoadMore = false,
     ) => {
       console.log("📞 fetchAvailableInvoices called with:", {
         searchTerm,
@@ -174,7 +178,7 @@ const CreditNoteTable = ({
           forceAll ? "" : customerName,
           invoicePagination.page_size,
           page,
-          undefined
+          undefined,
         );
 
         if (response.success) {
@@ -205,7 +209,7 @@ const CreditNoteTable = ({
         setIsLoadingMore(false);
       }
     },
-    [creditNotes, invoicePagination.page_size]
+    [creditNotes, invoicePagination.page_size],
   );
 
   const handleDropdownOpen = (creditNote, searchTerm = "") => {
@@ -248,7 +252,7 @@ const CreditNoteTable = ({
       customerName, // 2nd: customer name
       forceAll, // 3rd: forceAll (boolean)
       1, // 4th: page (NUMBER 1)
-      false // 5th: isLoadMore
+      false, // 5th: isLoadMore
     );
   };
 
@@ -264,7 +268,7 @@ const CreditNoteTable = ({
       "", // 2nd: customer name
       true, // 3rd: forceAll (true for load more)
       nextPage, // 4th: page
-      true // 5th: isLoadMore
+      true, // 5th: isLoadMore
     );
   }, [
     invoicePagination,
@@ -280,15 +284,14 @@ const CreditNoteTable = ({
         loadMoreInvoices();
       }
     },
-    [loadMoreInvoices]
+    [loadMoreInvoices],
   );
 
   const fetchInvoiceCreditSummary = useCallback(async (invoiceId) => {
     if (!invoiceId) return null;
     try {
-      const response = await creditNoteService.getInvoiceCreditSummary(
-        invoiceId
-      );
+      const response =
+        await creditNoteService.getInvoiceCreditSummary(invoiceId);
       return response.success ? response.summary : null;
     } catch (error) {
       console.error("Error fetching invoice credit summary:", error);
@@ -303,7 +306,7 @@ const CreditNoteTable = ({
       "", // 2nd: customer name
       true, // 3rd: forceAll (true to get all invoices initially)
       1, // 4th: page (NUMBER 1)
-      false // 5th: isLoadMore
+      false, // 5th: isLoadMore
     );
   }, [fetchAvailableInvoices]);
 
@@ -313,7 +316,7 @@ const CreditNoteTable = ({
       for (const creditNote of creditNotes) {
         if (creditNote.related_invoice?.id) {
           const summary = await fetchInvoiceCreditSummary(
-            creditNote.related_invoice.id
+            creditNote.related_invoice.id,
           );
           if (summary) summaries[creditNote.related_invoice.id] = summary;
         }
@@ -344,9 +347,8 @@ const CreditNoteTable = ({
 
   const handleValidation = async (creditNoteId) => {
     try {
-      const result = await creditNoteService.validateCreditNoteToKRA(
-        creditNoteId
-      );
+      const result =
+        await creditNoteService.validateCreditNoteToKRA(creditNoteId);
 
       if (onValidationComplete) {
         onValidationComplete();
