@@ -104,10 +104,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
       }
     };
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number, currency_code) => {
       return new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: companyInfo.currency_code || "USD",
+        currency: currency_code || "USD",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(amount);
@@ -402,10 +402,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                     </td>
 
                     <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
-                      {formatCurrency(item.unit_price)}
+                      {formatCurrency(item.unit_price, invoice.currency_code)}
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">
-                      {formatCurrency(item.amount)}
+                      {formatCurrency(item.amount, invoice.currency_code)}
                     </td>
                   </tr>
                 ))}
@@ -426,7 +426,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                 <div className="flex justify-between py-2">
                   <span className="text-gray-700">TOTAL TAX:</span>
                   <span className="font-medium text-gray-900">
-                    {formatCurrency(invoice?.tax_total || 0)}
+                    {formatCurrency(
+                      invoice?.tax_total || 0,
+                      invoice.currency_code,
+                    )}
                   </span>
                 </div>
 
@@ -434,7 +437,10 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                   <div className="flex justify-between py-2 border-b border-gray-200">
                     <span className="text-gray-700">Shipping:</span>
                     <span className="font-medium text-gray-900">
-                      {formatCurrency(invoice.shipping_total)}
+                      {formatCurrency(
+                        invoice.shipping_total,
+                        invoice.currency_code,
+                      )}
                     </span>
                   </div>
                 )}
@@ -444,7 +450,7 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                     Total:
                   </span>
                   <span className="text-lg font-bold text-gray-900">
-                    {formatCurrency(invoice.total_amt)}
+                    {formatCurrency(invoice.total_amt, invoice.currency_code)}
                   </span>
                 </div>
 
@@ -460,7 +466,7 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                 >
                   <span className="text-lg font-semibold">Total Due:</span>
                   <span className="text-lg font-bold">
-                    {formatCurrency(invoice.total_amt)}
+                    {formatCurrency(invoice.total_amt, invoice.currency_code)}
                   </span>
                 </div>
               </div>
@@ -494,10 +500,16 @@ const InvoiceDisplay = forwardRef<HTMLDivElement, InvoiceDisplayProps>(
                   <tr>
                     <td className="py-2 px-4">{invoice?.tax_percent || 0} %</td>
                     <td className="py-2 px-4">
-                      {formatCurrency(invoice?.tax_total || 0)}
+                      {formatCurrency(
+                        invoice?.tax_total || 0,
+                        invoice.currency_code,
+                      )}
                     </td>
                     <td className="py-2 px-4">
-                      {formatCurrency(invoice?.subtotal || 0)}
+                      {formatCurrency(
+                        invoice?.subtotal || 0,
+                        invoice.currency_code,
+                      )}
                     </td>
                   </tr>
                 </tbody>

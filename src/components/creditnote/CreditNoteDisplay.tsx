@@ -104,10 +104,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
       }
     };
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number, currency_code: string) => {
       return new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: companyInfo.currency_code || "USD",
+        currency: currency_code || "KES",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(amount);
@@ -391,10 +391,13 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                       {item.qty}
                     </td>
                     <td className="px-4 py-3 text-center border-gray-300 text-sm text-gray-900">
-                      {formatCurrency(item.unit_price)}
+                      {formatCurrency(
+                        item.unit_price,
+                        creditNote.currency_code,
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">
-                      {formatCurrency(item.amount)}
+                      {formatCurrency(item.amount, creditNote.currency_code)}
                     </td>
                   </tr>
                 ))}
@@ -410,14 +413,18 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                   <span className="text-gray-700">SUBTOTAL:</span>
                   <span className="font-medium text-gray-900">
                     {formatCurrency(
-                      creditNote.subtotal || creditNote.total_amt
+                      creditNote.subtotal || creditNote.total_amt,
+                      creditNote.currency_code,
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-gray-700">TOTAL TAX:</span>
                   <span className="font-medium text-gray-900">
-                    {formatCurrency(creditNote?.tax_total || 0)}
+                    {formatCurrency(
+                      creditNote?.tax_total || 0,
+                      creditNote.currency_code,
+                    )}
                   </span>
                 </div>
 
@@ -425,7 +432,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                   <div className="flex justify-between py-2 border-b border-gray-200">
                     <span className="text-gray-700">Shipping:</span>
                     <span className="font-medium text-gray-900">
-                      {formatCurrency(creditNote.shipping_total)}
+                      {formatCurrency(
+                        creditNote.shipping_total,
+                        creditNote.currency_code,
+                      )}
                     </span>
                   </div>
                 )}
@@ -435,7 +445,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                     Credit Amount:
                   </span>
                   <span className="text-lg font-bold text-green-600">
-                    {formatCurrency(creditNote.total_amt)}
+                    {formatCurrency(
+                      creditNote.total_amt,
+                      creditNote.currency_code,
+                    )}
                   </span>
                 </div>
 
@@ -454,7 +467,10 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                       Available Credit:
                     </span>
                     <span className="text-lg font-bold">
-                      {formatCurrency(creditNote.balance)}
+                      {formatCurrency(
+                        creditNote.balance,
+                        creditNote.currency_code,
+                      )}
                     </span>
                   </div>
                 )}
@@ -492,10 +508,16 @@ const CreditNoteDisplay = forwardRef<HTMLDivElement, CreditNoteDisplayProps>(
                       {creditNote?.tax_percent || 0} %
                     </td>
                     <td className="py-2 px-4">
-                      {formatCurrency(creditNote?.tax_total || 0)}
+                      {formatCurrency(
+                        creditNote?.tax_total || 0,
+                        creditNote.currency_code,
+                      )}
                     </td>
                     <td className="py-2 px-4">
-                      {formatCurrency(creditNote?.subtotal || 0)}
+                      {formatCurrency(
+                        creditNote?.subtotal || 0,
+                        creditNote.currency_code,
+                      )}
                     </td>
                   </tr>
                 </tbody>

@@ -32,7 +32,7 @@ const LinkedInvoiceInfo = ({
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-gray-700">Available:</span>
         <span className="text-xs font-semibold text-blue-600">
-          {formatAmount(available)}
+          {formatAmount(available, creditNote?.currency_code)}
         </span>
       </div>
       {summary.is_fully_credited && (

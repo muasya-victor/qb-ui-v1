@@ -1,4 +1,4 @@
-export const formatAmount = (amount, currencyCode = "USD") => {
+export const formatAmount = (amount, currencyCode = "KES") => {
   if (!amount) amount = 0;
   const numericAmount = parseFloat(amount);
 

@@ -132,7 +132,7 @@ const CreditNoteTableRow = ({
       {/* Credit Amount */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm font-semibold text-green-600">
-          {formatAmount(creditNote.total_amt, companyInfo?.currency_code)}
+          {formatAmount(creditNote.total_amt, creditNote?.currency_code)}
         </div>
       </td>
 
@@ -145,7 +145,7 @@ const CreditNoteTableRow = ({
               : "text-blue-600"
           }`}
         >
-          {formatAmount(creditNote.balance, companyInfo?.currency_code)}
+          {formatAmount(creditNote.balance, creditNote?.currency_code)}
         </div>
       </td>
 

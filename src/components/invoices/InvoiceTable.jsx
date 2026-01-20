@@ -129,10 +129,10 @@ const InvoiceTable = ({
     });
   };
 
-  const formatAmount = (amount) => {
+  const formatAmount = (amount, currency_code) => {
     if (!amount) amount = 0;
     const numericAmount = parseFloat(amount);
-    const currencyCode = companyInfo?.currency_code || "USD";
+    const currencyCode = currency_code || "USD";
 
     try {
       return new Intl.NumberFormat("en-US", {
@@ -274,7 +274,7 @@ const InvoiceTable = ({
                     {/* Total Amount */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        {formatAmount(invoice.total_amt)}
+                        {formatAmount(invoice.total_amt, invoice.currency_code)}
                       </div>
                     </td>
 
@@ -416,7 +416,7 @@ const InvoiceTable = ({
                   • KRA Validated:{" "}
                   {
                     invoices.filter(
-                      (inv) => inv.kra_submission?.status === "success"
+                      (inv) => inv.kra_submission?.status === "success",
                     ).length
                   }
                 </span>
