@@ -134,8 +134,8 @@ const InvoiceSelector = ({
     );
   };
 
-  const handleRemoveInvoice = () => {
-    onInvoiceChange("none");
+  const handleRemoveInvoice = (invoice) => {
+    onInvoiceChange(invoice.id);
   };
 
   if (creditNote.related_invoice) {
